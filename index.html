@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Nexsiz — Stateful Network Protocol Fuzzer. Official documentation." />
+  <title>Nexsiz — Stateful Network Protocol Fuzzer</title>
+  <link rel="icon" href="assets/img/nexsiz.jpg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/main.css" />
+  <link rel="stylesheet" href="assets/css/components.css" />
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <img src="assets/img/nexsiz.jpg" alt="Nexsiz" class="sidebar-logo" />
+        <div class="sidebar-brand">Nex<span>siz</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">
+          <span class="nav-section-title">Start</span>
+          <a class="nav-link active" href="index.html">Overview</a>
+          <a class="nav-link" href="guide/getting-started.html">Getting Started</a>
+          <a class="nav-link" href="guide/installation.html">Installation</a>
+          <a class="nav-link" href="guide/quickstart.html">Quick Start</a>
+          <a class="nav-link" href="guide/configuration.html">Configuration</a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Architecture</span>
+          <a class="nav-link" href="architecture/overview.html">Overview</a>
+          <a class="nav-link" href="architecture/layers.html">Layers</a>
+          <a class="nav-link" href="architecture/data-flow.html">Data Flow</a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Features</span>
+          <a class="nav-link" href="features/protocol-models.html">Protocol Models</a>
+          <a class="nav-link" href="features/integrity-repair.html">Integrity Repair</a>
+          <a class="nav-link" href="features/mutation.html">Mutation</a>
+          <a class="nav-link" href="features/coverage.html">Coverage</a>
+          <a class="nav-link" href="features/snapshot-desocket.html">Snapshot & Desocket</a>
+          <a class="nav-link" href="features/encryptor.html">Encryptor</a>
+          <a class="nav-link" href="features/oracles.html">Oracles</a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">NXS</span>
+          <a class="nav-link" href="nxs/overview.html">Overview</a>
+          <a class="nav-link" href="nxs/contract.html">Contract</a>
+          <a class="nav-link" href="nxs/official-set.html">Official Set</a>
+          <a class="nav-link" href="nxs/custom-nxs.html">Custom NXS</a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Reference</span>
+          <a class="nav-link" href="reference/cli.html">CLI</a>
+          <a class="nav-link" href="reference/config.html">Config File</a>
+          <a class="nav-link" href="reference/environment.html">Environment</a>
+          <a class="nav-link" href="reference/exit-codes.html">Exit Codes</a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Advanced</span>
+          <a class="nav-link" href="advanced/libafl.html">LibAFL Path</a>
+          <a class="nav-link" href="advanced/python-rpc.html">Python / RPC</a>
+          <a class="nav-link" href="advanced/frida-agent.html">Frida Agent</a>
+          <a class="nav-link" href="advanced/extending.html">Extending</a>
+        </div>
+        <div class="nav-section">
+          <span class="nav-section-title">Security</span>
+          <a class="nav-link" href="security/policy.html">Policy</a>
+          <a class="nav-link" href="security/authorised-use.html">Authorised Use</a>
+        </div>
+      </nav>
+      <div class="sidebar-footer">v0.1.0 &middot; Apache-2.0</div>
+    </aside>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menu-toggle" aria-label="Open menu">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+          </button>
+        </div>
+        <div class="topbar-actions">
+          <div class="search-box">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14z"/>
+            </svg>
+            <input type="search" placeholder="Search docs…" aria-label="Search" disabled title="Search coming in a later phase" />
+          </div>
+          <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+            </svg>
+          </button>
+        </div>
+      </header>
+      <main class="content">
+        <div class="content-inner">
+          <section class="hero">
+            <img src="assets/img/nexsiz.jpg" alt="Nexsiz logo" class="hero-logo" />
+            <h1>Nexsiz</h1>
+            <p class="tagline">
+              Stateful Network Protocol Fuzzer — pure Rust, semantic mutation,
+              integrity repair, hybrid grey-box coverage, and post-discovery existence scripts.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="guide/getting-started.html">Get Started</a>
+              <a class="btn btn-secondary" href="reference/cli.html">CLI Reference</a>
+              <a class="btn btn-secondary" href="architecture/overview.html">Architecture</a>
+            </div>
+          </section>
+          <div class="status-grid">
+            <div class="status-item"><div class="label">Version</div><div class="value">0.1.0</div></div>
+            <div class="status-item"><div class="label">Maturity</div><div class="value">Operational</div></div>
+            <div class="status-item"><div class="label">Platform</div><div class="value">Linux x86_64</div></div>
+            <div class="status-item"><div class="label">Default deps</div><div class="value">libc only</div></div>
+            <div class="status-item"><div class="label">License</div><div class="value">Apache-2.0</div></div>
+            <div class="status-item"><div class="label">Language</div><div class="value">Pure Rust</div></div>
+          </div>
+          <h2>What is Nexsiz?</h2>
+          <p>
+            Nexsiz is a high-performance, modular network protocol fuzzer designed to explore
+            the deepest regions of a protocol’s state machine — areas where conventional fuzzers
+            lose structural validity or state context and remain blind.
+          </p>
+          <p>
+            Design priorities are explicit: <strong>precision over volume</strong>, structural
+            integrity after mutation, hybrid black/grey-box feedback, and operational resilience
+            under realistic network conditions.
+          </p>
+          <blockquote>
+            Offensive tooling must execute correctly, remain maintainable under operational pressure,
+            and preserve the operator’s ability to reason about the exact behaviour the target exhibited.
+          </blockquote>
+          <h2>Core Capabilities</h2>
+          <div class="feature-grid">
+            <div class="feature-card"><h3>Semantic Mutation</h3><p>Hierarchical field / message / sequence mutators that respect protocol grammar.</p></div>
+            <div class="feature-card"><h3>Integrity Repair</h3><p>Automatic restoration of length fields, checksums, framing, and terminators post-mutation.</p></div>
+            <div class="feature-card"><h3>Grey-box Coverage</h3><p>CoverageProvider trait, AFL-style 64&nbsp;KiB edge map, Frida agent integration.</p></div>
+            <div class="feature-card"><h3>Snapshot & Desocket</h3><p>ProcessRestart / CRIU backends and protocol-level connection reset without full reconnect.</p></div>
+            <div class="feature-card"><h3>NXS Existence Scripts</h3><p>Post-event actors for repro, differential probe, auth escalation, chain analysis, and more.</p></div>
+            <div class="feature-card"><h3>Minimal Surface</h3><p>Default build depends only on libc. LibAFL, JSON models, and CRIU are optional features.</p></div>
+          </div>
+          <h2>Documentation Status</h2>
+          <p>
+            This site is under active construction. Phase&nbsp;0 delivers the complete navigation
+            skeleton and design system. Content pages will be filled progressively.
+          </p>
+          <div class="callout info">
+            <div class="callout-title">Phase 0 complete</div>
+            Structure, layout, theme, and navigation are ready. Content authoring begins in Phase&nbsp;1.
+          </div>
+          <div class="page-nav">
+            <span></span>
+            <a class="next" href="guide/getting-started.html">
+              <span class="label">Next</span>
+              <span class="title">Getting Started →</span>
+            </a>
+          </div>
+        </div>
+      </main>
+      <footer class="footer">
+        <span>Nexsiz Documentation &middot; Authorised use only</span>
+        <span>Apache-2.0 &middot; Revana</span>
+      </footer>
+    </div>
+  </div>
+  <script src="assets/js/main.js"></script>
+</body>
+</html>
