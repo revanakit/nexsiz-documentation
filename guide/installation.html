@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Installation. Official documentation."/>
 <title>Installation — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -21,7 +22,7 @@
 <div class="nav-section"><span class="nav-section-title">Start</span>
 <a class="nav-link" href="../index.html">Overview</a>
 <a class="nav-link" href="../guide/getting-started.html">Getting Started</a>
-<a class="nav-link" href="../guide/installation.html">Installation</a>
+<a class="nav-link active" href="../guide/installation.html">Installation</a>
 <a class="nav-link" href="../guide/quickstart.html">Quick Start</a>
 <a class="nav-link" href="../guide/configuration.html">Configuration</a></div>
 <div class="nav-section"><span class="nav-section-title">Architecture</span>
@@ -66,17 +67,110 @@
 </div>
 <div class="topbar-actions">
 <button class="icon-btn" id="theme-toggle" aria-label="Toggle theme">
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 008.354-5.646z"/></svg>
 </button>
 </div>
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Start<span>/</span>Installation</div>
-<div class="page-header"><h1>Installation</h1><p class="lead">Build options, feature flags, and platform notes.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Installation</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Installation</h1><p class="lead">Toolchain, feature flags, release build, and operational Make targets.</p></div>
+
+<h2>Toolchain</h2>
+<p>Nexsiz pins Rust <strong>1.87.0</strong> in <code>rust-toolchain.toml</code>. Older toolchains (e.g. 1.75) cannot build <code>--features libafl</code> because transitive dependencies require edition 2024.</p>
+<div class="code-block">
+<pre><code>rustup toolchain install 1.87.0
+rustup default 1.87.0
+# or rely on rust-toolchain.toml when entering the repo
+cd nexsiz &amp;&amp; rustc --version
+</code></pre>
+</div>
+
+<div class="callout info">
+<div class="callout-title">CI artefacts</div>
+GitHub Actions builds release binaries for the default and full feature sets. Prefer those artefacts when the local toolchain cannot satisfy LibAFL dependencies.
+</div>
+
+<h2>Default build</h2>
+<p>Default features are empty. The binary depends only on <code>libc</code> (Unix). No LibAFL, no serde, no CRIU.</p>
+<div class="code-block">
+<pre><code>cargo build --release
+# binary → target/release/nexsiz
+ls -lh target/release/nexsiz
+</code></pre>
+</div>
+
+<p>Release profile uses LTO, single codegen unit, <code>panic = "abort"</code>, <code>opt-level = 3</code>, and strip.</p>
+
+<h2>Optional features</h2>
+<table>
+<thead><tr><th>Feature</th><th>Enables</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>libafl</code></td><td>LibAFL executor + mutator path (<code>-L</code>)</td><td>Requires toolchain 1.87+; pulls <code>libafl</code>, <code>libafl_bolts</code>, <code>serde</code></td></tr>
+<tr><td><code>json-model</code></td><td>Operator-defined JSON field trees (<code>-m path/to/model.json</code>)</td><td>Pulls <code>serde</code>, <code>serde_json</code></td></tr>
+<tr><td><code>criu</code></td><td>CRIU snapshot backend (<code>--snapshot-backend criu</code>)</td><td>Requires <code>criu</code> on <code>PATH</code>; Linux only</td></tr>
+</tbody>
+</table>
+
+<div class="code-block">
+<pre><code># Single feature
+cargo build --release --features libafl
+cargo build --release --features json-model
+cargo build --release --features criu
+
+# Combined
+cargo build --release --features "libafl,json-model"
+cargo build --release --features "libafl,json-model,criu"
+</code></pre>
+</div>
+
+<h2>Makefile targets</h2>
+<p>The repo ships an operational Makefile. Common targets:</p>
+<table>
+<thead><tr><th>Target</th><th>Action</th></tr></thead>
+<tbody>
+<tr><td><code>make release</code></td><td>Optimised binary (override features with <code>FEATURES=…</code>)</td></tr>
+<tr><td><code>make release-full</code></td><td>Build with <code>libafl,json-model,criu</code></td></tr>
+<tr><td><code>make debug</code></td><td>Debug binary</td></tr>
+<tr><td><code>make nxs</code></td><td>Build all official NXS existence scripts into <code>nxs/bin/</code></td></tr>
+<tr><td><code>make status</code></td><td>Show binary + NXS presence</td></tr>
+<tr><td><code>make clean-shm</code></td><td>Remove residual <code>/dev/shm/nexsiz-cov*</code> maps</td></tr>
+<tr><td><code>make clean-all</code></td><td>Full wipe (build + output + SHM)</td></tr>
+</tbody>
+</table>
+
+<div class="code-block">
+<pre><code>make release FEATURES=json-model
+make release-full
+make nxs
+make status
+</code></pre>
+</div>
+
+<h2>NXS scripts (optional)</h2>
+<p>Post-event existence scripts are separate pure-stdlib binaries. Build them only if the campaign will use <code>--nxs</code>:</p>
+<div class="code-block">
+<pre><code>cd nxs &amp;&amp; ./build.sh
+# or
+make nxs
+./target/release/nexsiz --nxs default --nxs-list
+</code></pre>
+</div>
+
+<h2>Platform notes</h2>
+<ul>
+<li><strong>Linux x86_64</strong> — primary; all features supported.</li>
+<li><strong>Frida / SHM coverage</strong> and <strong>CRIU</strong> — Linux only.</li>
+<li><strong>Windows</strong> — core fuzzer path may build; SHM uses kernel32 file mapping; CRIU/Frida unavailable.</li>
+</ul>
+
+<div class="page-nav">
+<a class="prev" href="../guide/getting-started.html"><span class="label">Previous</span><span class="title">← Getting Started</span></a>
+<a class="next" href="../guide/quickstart.html"><span class="label">Next</span><span class="title">Quick Start →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
