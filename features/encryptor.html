@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Encryptor. Official documentation."/>
 <title>Encryptor — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -34,7 +35,7 @@
 <a class="nav-link" href="../features/mutation.html">Mutation</a>
 <a class="nav-link" href="../features/coverage.html">Coverage</a>
 <a class="nav-link" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
-<a class="nav-link" href="../features/encryptor.html">Encryptor</a>
+<a class="nav-link active" href="../features/encryptor.html">Encryptor</a>
 <a class="nav-link" href="../features/oracles.html">Oracles</a></div>
 <div class="nav-section"><span class="nav-section-title">NXS</span>
 <a class="nav-link" href="../nxs/overview.html">Overview</a>
@@ -72,11 +73,64 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Encryptor</div>
-<div class="page-header"><h1>Encryptor</h1><p class="lead">ChaCha20, TLS record framing, XOR, and combinations.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Encryptor</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Encryptor</h1><p class="lead">Post-repair wire transforms: XOR, ChaCha20, TLS record, pipelines.</p></div>
+
+<p>Optional encryption and framing applied <strong>after</strong> integrity repair and <strong>before</strong> wire send. Pure Rust (ChaCha20 RFC 8439, optional Poly1305, TLS record framing) — no external crypto libraries.</p>
+
+<div class="callout info">
+<div class="callout-title">Module</div>
+<p style="margin-bottom:0"><code>src/plugin/encryptor.rs</code> + <code>src/plugin/crypto.rs</code>. Default encryptor is <code>null</code>.</p>
+</div>
+
+<h2>CLI / env</h2>
+<div class="code-block">
+<pre><code>nexsiz -m http -e null -v
+nexsiz -m http -e xor -k secret -v
+nexsiz -m http -e chacha20 -k 0x0123... -v
+nexsiz -m http -e chacha20+tls -v
+export NEXSIZ_ENC_KEY='0x...'
+export NEXSIZ_ENC_NONCE='0x...'
+export NEXSIZ_NONCE_MODE=fixed   # or incrementing | random
+</code></pre>
+</div>
+<p>Flags: <code>-e / --enc / --encryptor</code>, <code>-k / --key</code>. Config: <code>encryptor</code>, <code>enc_key</code>.</p>
+
+<h2>Implementations</h2>
+<table>
+<thead><tr><th>Name</th><th>Aliases</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>null</code></td><td><code>none</code></td><td>Identity</td></tr>
+<tr><td><code>xor</code></td><td>—</td><td>Rolling XOR; skips protected fields</td></tr>
+<tr><td><code>chacha20</code></td><td><code>chacha</code></td><td>RFC 8439 stream; counter reset per message by default</td></tr>
+<tr><td><code>chacha20-poly1305</code></td><td><code>aead</code>, <code>chacha-poly</code></td><td>AEAD; output ciphertext ‖ 16-byte tag</td></tr>
+<tr><td><code>tls-record</code></td><td><code>tls</code></td><td>TLS record framing (type/ver/len/payload); fragment &gt;16&nbsp;KiB</td></tr>
+<tr><td><code>tls-handshake</code> / <code>tls-alert</code></td><td>—</td><td>Content-type variants</td></tr>
+<tr><td><code>chacha20+tls</code></td><td><code>chacha+tls</code></td><td>Stream encrypt then TLS frame</td></tr>
+<tr><td><code>chacha20-poly1305+tls</code></td><td><code>aead+tls</code></td><td>AEAD then TLS frame</td></tr>
+<tr><td><code>xor+tls</code></td><td><code>xor+tls-record</code></td><td>XOR then TLS frame</td></tr>
+</tbody>
+</table>
+
+<h2>Nonce modes</h2>
+<ul>
+<li><code>fixed</code> — deterministic (default; reproducible campaigns)</li>
+<li><code>incrementing</code> — monotonic per message</li>
+<li><code>random</code> — high-entropy per message</li>
+</ul>
+<p>Key/nonce: hex (<code>0x…</code>) or raw string via CLI or <code>NEXSIZ_ENC_KEY</code> / <code>NEXSIZ_ENC_NONCE</code>.</p>
+
+<div class="callout warn">
+<div class="callout-title">Operational note</div>
+<p style="margin-bottom:0">Prefer env for long-lived keys. Encryptor is for protocol-realistic wire shape and opaque channels during authorised testing — not a general-purpose crypto product API.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../features/snapshot-desocket.html"><span class="label">Previous</span><span class="title">← Snapshot &amp; Desocket</span></a>
+<a class="next" href="../features/oracles.html"><span class="label">Next</span><span class="title">Oracles →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

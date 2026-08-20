@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Oracles. Official documentation."/>
 <title>Oracles — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -35,7 +36,7 @@
 <a class="nav-link" href="../features/coverage.html">Coverage</a>
 <a class="nav-link" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
 <a class="nav-link" href="../features/encryptor.html">Encryptor</a>
-<a class="nav-link" href="../features/oracles.html">Oracles</a></div>
+<a class="nav-link active" href="../features/oracles.html">Oracles</a></div>
 <div class="nav-section"><span class="nav-section-title">NXS</span>
 <a class="nav-link" href="../nxs/overview.html">Overview</a>
 <a class="nav-link" href="../nxs/contract.html">Contract</a>
@@ -72,11 +73,66 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Oracles</div>
-<div class="page-header"><h1>Oracles</h1><p class="lead">Differential, sanitizer, coverage, and expanded oracles.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Oracles</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Oracles</h1><p class="lead">Interestingness suites from strict crash to diffsan and expanded.</p></div>
+
+<p>Oracles decide whether an execution is interesting enough to retain, triage, or deepen. Selectable suites range from crash-only strict mode to multi-dimensional differential + sanitizer composites.</p>
+
+<div class="callout info">
+<div class="callout-title">Module</div>
+<p style="margin-bottom:0"><code>src/plugin/oracle.rs</code> + <code>src/monitor/oracle</code>. Resolve via <code>-O / --oracle</code> or config <code>oracle=</code>.</p>
+</div>
+
+<h2>CLI</h2>
+<div class="code-block">
+<pre><code>nexsiz -m ftp -O default -v
+nexsiz -m ftp -O strict -v
+nexsiz -m http -O diffsan -v      # recommended deep campaigns
+nexsiz -m http -O expanded -v     # maximum sensitivity
+</code></pre>
+</div>
+
+<h2>Named suites</h2>
+<table>
+<thead><tr><th>Name</th><th>Aliases</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td><code>default</code></td><td>—</td><td>Crash / hang / reset + coverage/state signals + classic composite</td></tr>
+<tr><td><code>strict</code></td><td>—</td><td>Only crash, hang, connection-reset</td></tr>
+<tr><td><code>crash</code> / <code>hang</code> / <code>coverage</code> / <code>error</code></td><td>—</td><td>Single-signal oracles</td></tr>
+<tr><td><code>differential</code></td><td><code>diff</code></td><td>Multi-dimensional baseline divergence</td></tr>
+<tr><td><code>sanitizer</code></td><td><code>san</code></td><td>ASan/UBSan patterns, length anomaly, null-byte, protocol violation + crash/hang</td></tr>
+<tr><td><code>diffsan</code></td><td><code>diff+san</code></td><td>differential + sanitizer + coverage</td></tr>
+<tr><td><code>expanded</code></td><td>—</td><td>diffsan + error oracle</td></tr>
+</tbody>
+</table>
+
+<h2>Differential oracle</h2>
+<ul>
+<li>Coarse key: response-code shape + sequence hash</li>
+<li>Baseline dimensions: codes, body fingerprint (first 128 B/response), length class, coverage map hash, optional timing</li>
+<li>First observation establishes baseline (not interesting); later divergence ≥ min_divergence flags</li>
+<li>Bounded map (max_baselines 4096); slow refresh after stable hits</li>
+</ul>
+
+<h2>Sanitizer suite components</h2>
+<ul>
+<li><strong>Pattern</strong> — AddressSanitizer, heap-use-after-free, SEGV, stack smashing, runtime asserts, … in <code>error</code> or response body</li>
+<li><strong>Length anomaly</strong> — sliding median + 16&nbsp;MiB hard ceiling</li>
+<li><strong>Null-byte</strong> — interior NUL in mostly-ASCII responses</li>
+<li><strong>Protocol violation</strong> — e.g. mixed 2xx+5xx; 1xx then connection reset</li>
+</ul>
+
+<div class="callout warn">
+<div class="callout-title">Campaign guidance</div>
+<p style="margin-bottom:0">Fast noisy passes: <code>strict</code> / <code>default</code>. Deep drift + memory bugs: <code>diffsan</code> or <code>expanded</code>. Pair with coverage map when grey-box feedback is available.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../features/encryptor.html"><span class="label">Previous</span><span class="title">← Encryptor</span></a>
+<a class="next" href="../nxs/overview.html"><span class="label">Next</span><span class="title">NXS Overview →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
