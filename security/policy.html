@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Security Policy. Official documentation."/>
 <title>Security Policy — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -52,7 +53,7 @@
 <a class="nav-link" href="../advanced/frida-agent.html">Frida Agent</a>
 <a class="nav-link" href="../advanced/extending.html">Extending</a></div>
 <div class="nav-section"><span class="nav-section-title">Security</span>
-<a class="nav-link" href="../security/policy.html">Policy</a>
+<a class="nav-link active" href="../security/policy.html">Policy</a>
 <a class="nav-link" href="../security/authorised-use.html">Authorised Use</a></div>
 </nav>
 <div class="sidebar-footer">v0.1.0 &middot; Apache-2.0</div>
@@ -71,12 +72,61 @@
 </div>
 </header>
 <main class="content"><div class="content-inner">
-<div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Security<span>/</span>Security Policy</div>
-<div class="page-header"><h1>Security Policy</h1><p class="lead">Supported versions, reporting, and operational hardening.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Security Policy</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Security<span>/</span>Policy</div>
+<div class="page-header"><h1>Security Policy</h1><p class="lead">Responsible handling of Nexsiz as an offensive-security research instrument.</p></div>
+
+<p>Nexsiz is a stateful network protocol fuzzer designed for authorised security research, defensive testing, and red-team operations. It is dual-use by nature: the same capabilities that find protocol defects can be misused. This page states the project’s expectations.</p>
+
+<div class="callout info">
+<div class="callout-title">Scope</div>
+<p style="margin-bottom:0">This policy covers the Nexsiz binary, NXS actors, Frida coverage agent, Python/RPC control plane, and all documentation in this site.</p>
+</div>
+
+<h2>Intended use</h2>
+<ul>
+<li>Fuzzing systems you own or have explicit written authorisation to test.</li>
+<li>Research into protocol robustness, state-machine reachability, and crash triage.</li>
+<li>Red-team / purple-team exercises conducted under a defined rules of engagement.</li>
+<li>Development and evaluation of defensive controls (IDS/IPS signatures, protocol parsers, crash handlers).</li>
+</ul>
+
+<h2>Prohibited use</h2>
+<ul>
+<li>Targeting systems without prior authorisation.</li>
+<li>Using Nexsiz (or NXS actors) as a weapon against third parties.</li>
+<li>Redistributing modified builds for the purpose of unauthorised access or disruption.</li>
+<li>Bypassing legal, contractual, or organisational restrictions under the guise of “research”.</li>
+</ul>
+
+<h2>Vulnerability reporting</h2>
+<p>If you discover a security defect <em>in Nexsiz itself</em> (e.g. unsafe parsing of untrusted model files, RPC surface issues, or privilege problems in the Frida agent):</p>
+<ol>
+<li>Do not open a public issue with a full exploit.</li>
+<li>Contact the maintainer privately (see repository owner profile).</li>
+<li>Provide a minimal, reproducible description and impact assessment.</li>
+<li>Allow reasonable time for a fix before public disclosure.</li>
+</ol>
+
+<h2>Operational hardening (operator responsibility)</h2>
+<ul>
+<li>Run campaigns in isolated networks or VMs whenever possible.</li>
+<li>Restrict the RPC socket (<code>-Y</code>) to local, permission-controlled paths; do not expose it over the network.</li>
+<li>Treat crash corpora and NXS artefacts as potentially sensitive (they may contain protocol secrets or credentials from the target).</li>
+<li>Clean residual SHM regions (<code>/dev/shm/nexsiz-cov*</code>) after campaigns.</li>
+<li>Prefer least-privilege accounts for both the fuzzer and the target process under test.</li>
+</ul>
+
+<h2>License &amp; liability</h2>
+<p>Nexsiz is released under the <strong>Apache License 2.0</strong>. The software is provided “as is”, without warranty of any kind. The authors and contributors are not liable for misuse, damage, or legal consequences arising from operation of the tool. Operators are solely responsible for compliance with applicable laws and organisational policy.</p>
+
+<div class="page-nav">
+<a class="prev" href="../advanced/extending.html"><span class="label">Previous</span><span class="title">← Extending</span></a>
+<a class="next" href="../security/authorised-use.html"><span class="label">Next</span><span class="title">Authorised Use →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

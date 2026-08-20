@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Authorised Use. Official documentation."/>
 <title>Authorised Use — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -53,7 +54,7 @@
 <a class="nav-link" href="../advanced/extending.html">Extending</a></div>
 <div class="nav-section"><span class="nav-section-title">Security</span>
 <a class="nav-link" href="../security/policy.html">Policy</a>
-<a class="nav-link" href="../security/authorised-use.html">Authorised Use</a></div>
+<a class="nav-link active" href="../security/authorised-use.html">Authorised Use</a></div>
 </nav>
 <div class="sidebar-footer">v0.1.0 &middot; Apache-2.0</div>
 </aside>
@@ -72,11 +73,55 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Security<span>/</span>Authorised Use</div>
-<div class="page-header"><h1>Authorised Use</h1><p class="lead">Authorised testing only — legal and operational boundaries.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Authorised Use</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Authorised Use</h1><p class="lead">Conditions under which Nexsiz may be operated. Read before any campaign.</p></div>
+
+<p>By building, distributing, or running Nexsiz you acknowledge the following conditions. They exist to keep research productive and to reduce the risk of unintended harm.</p>
+
+<div class="callout info">
+<div class="callout-title">Authorisation first</div>
+<p style="margin-bottom:0">Only fuzz targets you own or for which you hold <strong>explicit, written authorisation</strong>. Verbal permission or assumed scope is insufficient for production systems.</p>
+</div>
+
+<h2>Checklist before a campaign</h2>
+<ol>
+<li><strong>Scope document</strong> — defined targets, ports, protocols, time windows, and out-of-scope assets.</li>
+<li><strong>Isolation</strong> — prefer dedicated VMs, containers, or lab networks; avoid production paths unless the engagement explicitly requires them.</li>
+<li><strong>Monitoring</strong> — ensure the target owner can observe load, crashes, and resource exhaustion.</li>
+<li><strong>Data handling</strong> — treat seeds, crashes, and NXS artefacts as potentially sensitive; restrict access and retention.</li>
+<li><strong>RPC exposure</strong> — if using <code>-Y</code>, bind only to a local Unix socket with restrictive permissions; never expose the control plane to untrusted networks.</li>
+<li><strong>Cleanup</strong> — remove SHM regions, temporary sockets, and residual process state after the campaign ends.</li>
+</ol>
+
+<h2>Red-team / APT-style use</h2>
+<p>Nexsiz can support authorised red-team operations (protocol fuzzing as part of adversary simulation). In that context:</p>
+<ul>
+<li>Operate strictly inside the approved rules of engagement.</li>
+<li>Coordinate with the blue team on crash reporting and deconfliction when required by the engagement.</li>
+<li>Do not retain or weaponise findings outside the engagement deliverables.</li>
+</ul>
+
+<h2>Research &amp; education</h2>
+<ul>
+<li>Classroom and lab use is encouraged when targets are purpose-built (intentionally vulnerable services, local daemons).</li>
+<li>Publish methodology and non-sensitive crash patterns; do not publish working exploits against third-party production systems without coordinated disclosure.</li>
+</ul>
+
+<h2>No warranty, operator liability</h2>
+<p>Nexsiz is provided under Apache-2.0 “as is”. The authors accept no liability for damage, downtime, data loss, or legal consequences resulting from its use. The operator who launches the binary is responsible for ensuring every target is in scope and every action is lawful.</p>
+
+<div class="callout info">
+<div class="callout-title">Footer notice</div>
+<p style="margin-bottom:0">Every page on this documentation site carries the line <em>“Authorised use only”</em>. That is intentional.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../security/policy.html"><span class="label">Previous</span><span class="title">← Security Policy</span></a>
+<a class="next" href="../index.html"><span class="label">Next</span><span class="title">Back to Overview →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
