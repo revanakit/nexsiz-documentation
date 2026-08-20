@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Snapshot & Desocket — Nexsiz</title>
+<meta name="description" content="Nexsiz — Snapshot & Desocket. Official documentation."/>
+<title>Snapshot &amp; Desocket — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="../assets/css/main.css"/>
@@ -33,7 +34,7 @@
 <a class="nav-link" href="../features/integrity-repair.html">Integrity Repair</a>
 <a class="nav-link" href="../features/mutation.html">Mutation</a>
 <a class="nav-link" href="../features/coverage.html">Coverage</a>
-<a class="nav-link" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
+<a class="nav-link active" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
 <a class="nav-link" href="../features/encryptor.html">Encryptor</a>
 <a class="nav-link" href="../features/oracles.html">Oracles</a></div>
 <div class="nav-section"><span class="nav-section-title">NXS</span>
@@ -72,11 +73,70 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Snapshot &amp; Desocket</div>
-<div class="page-header"><h1>Snapshot &amp; Desocket</h1><p class="lead">ProcessRestart, CRIU, ProtocolReset, and restore_epoch.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Snapshot &amp; Desocket</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Snapshot &amp; Desocket</h1><p class="lead">Process restore backends and protocol-level session reset.</p></div>
+
+<p>Two complementary mechanisms keep long campaigns stable: <strong>snapshot</strong> restores the target process after crash, and <strong>desocket</strong> resets protocol session state cheaper than full TCP teardown when connection reuse is enabled.</p>
+
+<div class="callout info">
+<div class="callout-title">Defaults</div>
+<p style="margin-bottom:0">Snapshot off; desocket strategies active only as needed with reuse. Zero behaviour change until <code>-Z</code> / snapshot config is enabled. Modules: <code>src/execution/snapshot/</code>, <code>src/execution/desocket/</code>.</p>
+</div>
+
+<h2>Snapshot</h2>
+<div class="code-block">
+<pre><code>nexsiz -t "./target_daemon" -Z --snapshot-backend process -m ftp -v
+nexsiz -t "./target_daemon" -Z --snapshot-backend criu -m ftp -v   # needs --features criu
+# config
+snapshot=true
+snapshot_backend=process
+target_cmd=./target_daemon
+</code></pre>
+</div>
+
+<table>
+<thead><tr><th>Backend</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td><code>null</code></td><td>Disabled</td></tr>
+<tr><td><code>process</code></td><td>Kill + respawn via <code>target_cmd</code> (default when <code>-Z</code>)</td></tr>
+<tr><td><code>criu</code></td><td>CRIU dump/restore; feature-gated; <code>criu</code> on <code>PATH</code></td></tr>
+</tbody>
+</table>
+
+<ul>
+<li>Engine takes snapshot at campaign start; restores on crash.</li>
+<li>Successful restore bumps <code>restore_epoch</code> → all workers force-reconnect.</li>
+<li>Requires <code>-t / --cmd / --target-cmd</code> for process backends.</li>
+<li>Output may include <code>output/snapshot/</code> when enabled.</li>
+</ul>
+
+<h2>Desocket</h2>
+<p>Protocol-level connection reset without full reconnect. Implements <code>ProtocolReset</code> with builtin strategies for FTP, SMTP, MQTT, HTTP, plus binary/null backends and <code>SocketState</code> tracking.</p>
+<ul>
+<li>Used when <code>connection_reuse</code> is on and the session needs a clean slate cheaper than TCP teardown + rehandshake.</li>
+<li>Feeds desocket counters and cost-aware energy scheduling.</li>
+<li>JSON models may embed a <code>desocket</code> block (sequences, goodbye, <code>success_on_response</code>) — see <code>models/custom-example.json</code>.</li>
+</ul>
+
+<div class="code-block">
+<pre><code># disable reuse entirely (always new connection)
+nexsiz -m ftp -n -v
+# config
+connection_reuse=false
+</code></pre>
+</div>
+
+<div class="callout warn">
+<div class="callout-title">When to enable snapshot</div>
+<p style="margin-bottom:0">Local daemons under <code>-t</code> that die on crash and must be revived for continued fuzzing. Network-only targets without a spawnable process do not use process/CRIU snapshot.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../features/coverage.html"><span class="label">Previous</span><span class="title">← Coverage</span></a>
+<a class="next" href="../features/encryptor.html"><span class="label">Next</span><span class="title">Encryptor →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

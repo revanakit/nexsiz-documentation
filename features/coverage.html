@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Coverage. Official documentation."/>
 <title>Coverage — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -32,7 +33,7 @@
 <a class="nav-link" href="../features/protocol-models.html">Protocol Models</a>
 <a class="nav-link" href="../features/integrity-repair.html">Integrity Repair</a>
 <a class="nav-link" href="../features/mutation.html">Mutation</a>
-<a class="nav-link" href="../features/coverage.html">Coverage</a>
+<a class="nav-link active" href="../features/coverage.html">Coverage</a>
 <a class="nav-link" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
 <a class="nav-link" href="../features/encryptor.html">Encryptor</a>
 <a class="nav-link" href="../features/oracles.html">Oracles</a></div>
@@ -72,11 +73,61 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Coverage</div>
-<div class="page-header"><h1>Coverage</h1><p class="lead">CoverageProvider, shared map, software edges, Frida agent.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Coverage</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Coverage</h1><p class="lead">Optional grey-box providers: null, map (AFL SHM), software.</p></div>
+
+<p>Grey-box instrumentation is optional. Default provider is <code>null</code> — zero overhead, zero behaviour change until <code>-C</code> is set.</p>
+
+<div class="callout info">
+<div class="callout-title">Module</div>
+<p style="margin-bottom:0"><code>src/coverage/</code> — <code>CoverageProvider</code> trait, <code>CoverageFeedback</code>, backends: null / map / software / SHM bridge. Classic map size: <code>MAP_SIZE = 64 KiB</code> (AFL-style).</p>
+</div>
+
+<h2>CLI</h2>
+<div class="code-block">
+<pre><code>nexsiz -h 127.0.0.1 -p 21 -m ftp -C null -v          # default
+nexsiz -h 127.0.0.1 -p 21 -m ftp -C map -S demo -v   # SHM + Frida agent
+nexsiz -h 127.0.0.1 -p 21 -m ftp -C software -v
+# env
+export NEXSIZ_SHM_ID=demo
+</code></pre>
+</div>
+<p>Flags: <code>-C / --cov / --coverage</code>, <code>-S / --shm / --coverage-shm</code>. Config: <code>coverage</code>, <code>coverage_shm</code>.</p>
+
+<h2>Providers</h2>
+<table>
+<thead><tr><th>Name</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>null</code></td><td>No-op feedback; default</td></tr>
+<tr><td><code>map</code></td><td>AFL-style 64&nbsp;KiB shared edge map; pairs with external agent via SHM id</td></tr>
+<tr><td><code>software</code></td><td>Pure software edge tracking (no external agent)</td></tr>
+</tbody>
+</table>
+
+<h2>Lifecycle</h2>
+<ol>
+<li><code>reset()</code> — clear ephemeral state before send</li>
+<li>Target executes</li>
+<li><code>collect(&amp;ExecutionResult) → CoverageFeedback</code></li>
+</ol>
+<p><code>CoverageFeedback</code>: <code>new_edges</code>, <code>hit_edges</code>, <code>map_hash</code>, <code>interesting</code>. Engine and state tracker consume this for scheduling and oracle signals.</p>
+
+<h2>Frida / SHM</h2>
+<p>POSIX SHM name pattern: <code>/nexsiz-cov-&lt;ID&gt;</code>. Agent script: <code>agents/frida/nexsiz_cov.js</code> (Stalker + exports modes). See <a href="../advanced/frida-agent.html">Frida Agent</a>.</p>
+<div class="code-block">
+<pre><code># cleanup after campaigns
+rm -f /dev/shm/nexsiz-cov*
+# or
+make clean-shm
+</code></pre>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../features/mutation.html"><span class="label">Previous</span><span class="title">← Mutation</span></a>
+<a class="next" href="../features/snapshot-desocket.html"><span class="label">Next</span><span class="title">Snapshot &amp; Desocket →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
