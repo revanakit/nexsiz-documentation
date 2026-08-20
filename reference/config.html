@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Config File. Official documentation."/>
 <title>Config File — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -43,7 +44,7 @@
 <a class="nav-link" href="../nxs/custom-nxs.html">Custom NXS</a></div>
 <div class="nav-section"><span class="nav-section-title">Reference</span>
 <a class="nav-link" href="../reference/cli.html">CLI</a>
-<a class="nav-link" href="../reference/config.html">Config File</a>
+<a class="nav-link active" href="../reference/config.html">Config File</a>
 <a class="nav-link" href="../reference/environment.html">Environment</a>
 <a class="nav-link" href="../reference/exit-codes.html">Exit Codes</a></div>
 <div class="nav-section"><span class="nav-section-title">Advanced</span>
@@ -72,11 +73,144 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Reference<span>/</span>Config File</div>
-<div class="page-header"><h1>Config File</h1><p class="lead">Key=value configuration file format.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Config File</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Config File</h1><p class="lead">Key=value configuration file reference — keys, aliases, and parser rules.</p></div>
+
+<p>Machine-oriented reference for the key=value configuration file loaded with <code>-c / --config</code>. For operator workflow and precedence, see <a href="../guide/configuration.html">Guide · Configuration</a>.</p>
+
+<div class="callout info">
+<div class="callout-title">Parser behaviour</div>
+<ul style="margin-bottom:0">
+<li>Format: one <code>key=value</code> per line; whitespace around key/value trimmed.</li>
+<li>Comments: lines starting with <code>#</code> (after trim) are ignored.</li>
+<li>Unknown keys: silently ignored (forward-compatible).</li>
+<li>Booleans: <code>true</code> / <code>1</code> = true; anything else for those keys = false.</li>
+<li>Implementation: <code>Config::from_file</code> in <code>src/common/config.rs</code>.</li>
+</ul>
+</div>
+
+<h2>Load</h2>
+<div class="code-block">
+<pre><code>nexsiz -c config/example.conf
+nexsiz -c /path/to/campaign.conf -v
+</code></pre>
+</div>
+<p>When <code>-c</code> is parsed, the entire <code>Config</code> is replaced from the file. Place <code>-c</code> early if you also pass flags that should apply after the file (flags after <code>-c</code> continue to update fields).</p>
+
+<h2>Shipped example</h2>
+<p>Repository path: <code>config/example.conf</code>.</p>
+<div class="code-block">
+<pre><code># Nexsiz example configuration
+host=127.0.0.1
+port=21
+protocol=tcp
+model=ftp
+timeout_ms=400
+max_reuse_messages=24
+
+integrity=default
+oracle=default
+encryptor=null
+
+workers=4
+connection_reuse=true
+
+seed_dir=seeds/ftp
+output_dir=output/ftp
+verbose=true
+
+# max_execs=100000
+# rng_seed=42
+# target_cmd=./target_daemon
+</code></pre>
+</div>
+
+<h2>Keys by group</h2>
+
+<h3>Target</h3>
+<table>
+<thead><tr><th>Key</th><th>Default</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>host</code></td><td><code>127.0.0.1</code></td><td>IP address</td></tr>
+<tr><td><code>port</code></td><td><code>80</code></td><td>u16</td></tr>
+<tr><td><code>protocol</code></td><td><code>tcp</code></td><td>lowercased: <code>tcp</code> | <code>udp</code></td></tr>
+<tr><td><code>timeout_ms</code></td><td><code>500</code></td><td>Per-operation timeout</td></tr>
+<tr><td><code>max_reuse_messages</code></td><td><code>32</code></td><td>Messages before forced reconnect</td></tr>
+<tr><td><code>target_cmd</code></td><td>—</td><td>Local process for monitor / snapshot</td></tr>
+</tbody>
+</table>
+
+<h3>Plugins</h3>
+<table>
+<thead><tr><th>Key</th><th>Aliases</th><th>Values</th></tr></thead>
+<tbody>
+<tr><td><code>model</code></td><td><code>protocol_model</code></td><td>Model name or path ending in <code>.json</code></td></tr>
+<tr><td><code>integrity</code></td><td><code>integrity_plugin</code></td><td><code>default</code> | <code>http</code> | <code>ftp</code> | <code>smtp</code> | <code>binary</code> | <code>binary-le</code> | <code>null</code></td></tr>
+<tr><td><code>oracle</code></td><td><code>oracle_plugin</code></td><td><code>default</code> | <code>strict</code> | <code>crash</code> | <code>hang</code> | <code>coverage</code> | <code>differential</code> | <code>sanitizer</code> | <code>diffsan</code> | <code>expanded</code></td></tr>
+<tr><td><code>encryptor</code></td><td><code>encryptor_plugin</code></td><td><code>null</code> | <code>xor</code> | <code>chacha20</code> | <code>tls-record</code> | <code>chacha20+tls</code> | <code>xor+tls</code></td></tr>
+<tr><td><code>enc_key</code></td><td><code>encryptor_key</code>, <code>key</code></td><td>Key material string</td></tr>
+<tr><td><code>coverage</code></td><td><code>coverage_provider</code></td><td><code>null</code> | <code>map</code> | <code>software</code></td></tr>
+<tr><td><code>coverage_shm</code></td><td><code>shm</code>, <code>shm_id</code></td><td>Frida SHM identifier</td></tr>
+</tbody>
+</table>
+
+<h3>Execution</h3>
+<table>
+<thead><tr><th>Key</th><th>Default</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>workers</code></td><td>#cores</td><td>Worker thread count</td></tr>
+<tr><td><code>connection_reuse</code></td><td><code>true</code></td><td><code>true</code>/<code>1</code></td></tr>
+<tr><td><code>snapshot</code></td><td><code>false</code></td><td><code>true</code>/<code>1</code></td></tr>
+<tr><td><code>snapshot_backend</code></td><td><code>process</code></td><td>Alias: <code>snapshot_provider</code> — <code>null</code> | <code>process</code> | <code>criu</code></td></tr>
+<tr><td><code>use_libafl</code></td><td><code>false</code></td><td>Alias: <code>libafl</code></td></tr>
+<tr><td><code>rpc_sock</code></td><td>—</td><td>Aliases: <code>rpc</code>, <code>python_rpc</code></td></tr>
+</tbody>
+</table>
+
+<h3>Campaign paths &amp; limits</h3>
+<table>
+<thead><tr><th>Key</th><th>Default</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>seed_dir</code></td><td><code>seeds</code></td><td>Corpus directory</td></tr>
+<tr><td><code>output_dir</code></td><td><code>output</code></td><td>Campaign output root</td></tr>
+<tr><td><code>max_execs</code></td><td>—</td><td>Stop after N executions</td></tr>
+<tr><td><code>rng_seed</code></td><td>—</td><td>Deterministic RNG</td></tr>
+<tr><td><code>verbose</code></td><td><code>false</code></td><td><code>true</code>/<code>1</code></td></tr>
+</tbody>
+</table>
+
+<h3>Mutator tuning</h3>
+<table>
+<thead><tr><th>Key</th><th>Default</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>hierarchical_prob</code></td><td><code>0.15</code></td><td>Hierarchy-level mutation probability</td></tr>
+<tr><td><code>field_prob</code></td><td><code>0.70</code></td><td>Field-level mutation probability</td></tr>
+<tr><td><code>dict_prob</code></td><td><code>0.25</code></td><td>Dictionary mutation probability</td></tr>
+<tr><td><code>template_prob</code></td><td><code>0.12</code></td><td>Template splice probability (clamped 0–1)</td></tr>
+<tr><td><code>max_mutations</code></td><td><code>8</code></td><td>Max mutations per input</td></tr>
+</tbody>
+</table>
+
+<h3>NXS</h3>
+<table>
+<thead><tr><th>Key</th><th>Default</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>nxs</code> / <code>nxs_set</code></td><td>—</td><td>Enables NXS and sets expression</td></tr>
+<tr><td><code>nxs_path</code></td><td>—</td><td>Colon-separated extra search paths</td></tr>
+<tr><td><code>nxs_events</code></td><td><code>crash,hang</code></td><td>Comma-separated event list</td></tr>
+<tr><td><code>nxs_cooldown</code></td><td><code>30</code></td><td>Alias: <code>nxs_cooldown_secs</code></td></tr>
+<tr><td><code>nxs_max_per_event</code></td><td><code>0</code></td><td>0 = unlimited</td></tr>
+<tr><td><code>nxs_max_total</code></td><td><code>0</code></td><td>0 = unlimited</td></tr>
+</tbody>
+</table>
+
+<div class="page-nav">
+<a class="prev" href="../reference/cli.html"><span class="label">Previous</span><span class="title">← CLI</span></a>
+<a class="next" href="../reference/environment.html"><span class="label">Next</span><span class="title">Environment →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

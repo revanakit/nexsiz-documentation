@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Environment Variables — Nexsiz</title>
+<meta name="description" content="Nexsiz — Environment. Official documentation."/>
+<title>Environment — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="../assets/css/main.css"/>
@@ -44,7 +45,7 @@
 <div class="nav-section"><span class="nav-section-title">Reference</span>
 <a class="nav-link" href="../reference/cli.html">CLI</a>
 <a class="nav-link" href="../reference/config.html">Config File</a>
-<a class="nav-link" href="../reference/environment.html">Environment</a>
+<a class="nav-link active" href="../reference/environment.html">Environment</a>
 <a class="nav-link" href="../reference/exit-codes.html">Exit Codes</a></div>
 <div class="nav-section"><span class="nav-section-title">Advanced</span>
 <a class="nav-link" href="../advanced/libafl.html">LibAFL Path</a>
@@ -71,12 +72,69 @@
 </div>
 </header>
 <main class="content"><div class="content-inner">
-<div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Reference<span>/</span>Environment Variables</div>
-<div class="page-header"><h1>Environment Variables</h1><p class="lead">NEXSIZ_* variables for keys, coverage, RPC, and NXS.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Environment Variables</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Reference<span>/</span>Environment</div>
+<div class="page-header"><h1>Environment</h1><p class="lead">Environment variables for secrets, coverage SHM, RPC, and NXS.</p></div>
+
+<p>Environment variables used by Nexsiz when the corresponding CLI flag or config key is not set. Companion pages: <a href="../guide/configuration.html">Guide · Configuration</a>, <a href="../reference/config.html">Config File</a>, <a href="../reference/cli.html">CLI</a>.</p>
+
+<div class="callout info">
+<div class="callout-title">When env applies</div>
+<p style="margin-bottom:0">After argument parsing, Nexsiz fills selected fields from the environment only if still unset: RPC socket, NXS set/path, and related encryptor/coverage material depending on path. Prefer explicit CLI or conf for reproducible campaigns; use env for host-local secrets and CI wiring.</p>
+</div>
+
+<h2>Variable reference</h2>
+<table>
+<thead><tr><th>Variable</th><th>Equivalent</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td><code>NEXSIZ_ENC_KEY</code></td><td><code>-k</code> / <code>enc_key</code></td><td>Encryptor key material</td></tr>
+<tr><td><code>NEXSIZ_ENC_NONCE</code></td><td>—</td><td>Encryptor nonce material</td></tr>
+<tr><td><code>NEXSIZ_NONCE_MODE</code></td><td>—</td><td><code>fixed</code> | <code>incrementing</code> | <code>random</code></td></tr>
+<tr><td><code>NEXSIZ_SHM_ID</code></td><td><code>-S</code> / <code>coverage_shm</code></td><td>Coverage shared-memory id for Frida agent (<code>/nexsiz-cov-&lt;ID&gt;</code>)</td></tr>
+<tr><td><code>NEXSIZ_RPC_SOCK</code></td><td><code>-Y</code> / <code>rpc_sock</code></td><td>Unix domain socket path for Python/RPC control</td></tr>
+<tr><td><code>NEXSIZ_NXS</code></td><td><code>--nxs</code> / <code>nxs</code></td><td>NXS set expression; enables NXS when non-empty</td></tr>
+<tr><td><code>NEXSIZ_NXS_PATH</code></td><td><code>--nxs-path</code> / <code>nxs_path</code></td><td>Colon-separated extra search directories for NXS binaries</td></tr>
+</tbody>
+</table>
+
+<h2>Examples</h2>
+<div class="code-block">
+<pre><code># Encryptor key without putting secrets in argv history
+export NEXSIZ_ENC_KEY='0x0123456789abcdef0123456789abcdef'
+export NEXSIZ_ENC_NONCE='0x000000000000000000000000'
+nexsiz -h 10.0.0.5 -p 443 -m http -e chacha20+tls -v
+
+# Frida coverage agent SHM id
+export NEXSIZ_SHM_ID=campaign42
+nexsiz -h 127.0.0.1 -p 21 -m ftp -C map -v
+
+# RPC control socket
+export NEXSIZ_RPC_SOCK=/tmp/nexsiz.sock
+nexsiz -h 127.0.0.1 -p 21 -m ftp -v
+# client: python3 python/nexsiz_client.py
+
+# NXS without repeating long flags
+export NEXSIZ_NXS=default
+export NEXSIZ_NXS_PATH=$HOME/.nexsiz/nxs/bin:./nxs/bin
+nexsiz -h 127.0.0.1 -p 21 -m ftp -v
+</code></pre>
+</div>
+
+<h2>Operational notes</h2>
+<ul>
+<li><strong>Secrets</strong> — Prefer env or a restricted conf file for keys; avoid embedding long-lived secrets in shell history via <code>-k</code>.</li>
+<li><strong>SHM cleanup</strong> — After map coverage campaigns: <code>rm -f /dev/shm/nexsiz-cov*</code> or <code>make clean-shm</code>.</li>
+<li><strong>Empty values</strong> — Empty string for <code>NEXSIZ_NXS</code> / <code>NEXSIZ_RPC_SOCK</code> is treated as unset (no enable).</li>
+<li><strong>Windows</strong> — RPC UDS and POSIX SHM paths differ; core env names remain the same where supported.</li>
+</ul>
+
+<div class="page-nav">
+<a class="prev" href="../reference/config.html"><span class="label">Previous</span><span class="title">← Config File</span></a>
+<a class="next" href="../reference/exit-codes.html"><span class="label">Next</span><span class="title">Exit Codes →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
