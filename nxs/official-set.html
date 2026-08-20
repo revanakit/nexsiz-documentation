@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Official Set. Official documentation."/>
 <title>Official Set — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -39,7 +40,7 @@
 <div class="nav-section"><span class="nav-section-title">NXS</span>
 <a class="nav-link" href="../nxs/overview.html">Overview</a>
 <a class="nav-link" href="../nxs/contract.html">Contract</a>
-<a class="nav-link" href="../nxs/official-set.html">Official Set</a>
+<a class="nav-link active" href="../nxs/official-set.html">Official Set</a>
 <a class="nav-link" href="../nxs/custom-nxs.html">Custom NXS</a></div>
 <div class="nav-section"><span class="nav-section-title">Reference</span>
 <a class="nav-link" href="../reference/cli.html">CLI</a>
@@ -72,11 +73,66 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>NXS<span>/</span>Official Set</div>
-<div class="page-header"><h1>Official Set</h1><p class="lead">auto-repro, save-notify, differential-probe, chain-repro, and more.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Official Set</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Official Set</h1><p class="lead">Official NXS binaries, categories, and when they escalate.</p></div>
+
+<p>Official NXS set. Source of truth for membership: <code>nxs/categories.toml</code>. Binaries produced by <code>nxs/build.sh</code> into <code>nxs/bin/</code>.</p>
+
+<table>
+<thead><tr><th>id</th><th>Binary</th><th>Category</th><th>Exit 2 when</th></tr></thead>
+<tbody>
+<tr><td><code>crash/auto-repro</code></td><td><code>nxs-auto-repro</code></td><td>safe, default</td><td>Crash/hang reproducible</td></tr>
+<tr><td><code>crash/save-notify</code></td><td><code>nxs-save-notify</code></td><td>safe, default</td><td>— (exit 0)</td></tr>
+<tr><td><code>crash/differential-probe</code></td><td><code>nxs-differential-probe</code></td><td>intrusive</td><td>Differential anomaly</td></tr>
+<tr><td><code>crash/state-diff</code></td><td><code>nxs-state-diff</code></td><td>intrusive</td><td>Response signature divergence</td></tr>
+<tr><td><code>crash/coverage-probe</code></td><td><code>nxs-coverage-probe</code></td><td>intrusive</td><td>Path diversity / mixed classes</td></tr>
+<tr><td><code>crash/auth-bypass</code></td><td><code>nxs-auth-bypass</code></td><td>intrusive</td><td>Unauthorized-looking success (FTP/SMTP/HTTP)</td></tr>
+<tr><td><code>crash/auth-escalation</code></td><td><code>nxs-auth-escalation</code></td><td>intrusive</td><td>Elevated privilege / command success after anomaly</td></tr>
+<tr><td><code>crash/chain-repro</code></td><td><code>nxs-chain-repro</code></td><td>intrusive</td><td>Chain escalation (leak, class transition, divergence)</td></tr>
+<tr><td><code>hang/timeout-analyzer</code></td><td><code>nxs-timeout-analyzer</code></td><td>hang</td><td>Hard hang confirmed</td></tr>
+<tr><td><code>external/notify-webhook</code></td><td><code>nxs-notify-webhook</code></td><td>external</td><td>— (HTTP notify)</td></tr>
+</tbody>
+</table>
+
+<h2>Category sets</h2>
+<div class="code-block">
+<pre><code># nxs/categories.toml (summary)
+default   = crash/auto-repro, crash/save-notify
+safe      = same as default
+crash     = auto-repro, differential-probe, save-notify, state-diff,
+            coverage-probe, auth-bypass, auth-escalation, chain-repro
+hang      = hang/timeout-analyzer
+intrusive = differential-probe, state-diff, coverage-probe,
+            auth-bypass, auth-escalation, chain-repro
+external  = external/notify-webhook
+</code></pre>
+</div>
+
+<h2>Notes</h2>
+<ul>
+<li><strong>auth-bypass vs auth-escalation</strong> — bypass probes unauthenticated entry; escalation tries elevated commands/paths after anomaly (FTP/SMTP/HTTP).</li>
+<li><strong>chain-repro</strong> — multi-shot prioritisation, controlled variants, high-leak artefacts (v1.1.0).</li>
+<li><strong>Webhook</strong> — set <code>NXS_WEBHOOK_URL</code>; pure-stdlib client is HTTP-only (TLS via local proxy or <code>NXS_NOTIFY_CMD</code> + curl from save-notify).</li>
+</ul>
+
+<div class="code-block">
+<pre><code>export NXS_WEBHOOK_URL=http://127.0.0.1:9000/hook
+nexsiz ... --nxs external -v
+./nxs/bin/nxs-notify-webhook --meta output/nxs-meta/….json --url http://…
+</code></pre>
+</div>
+
+<div class="callout info">
+<div class="callout-title">Contract smoke</div>
+<p style="margin-bottom:0"><code>cd nxs &amp;&amp; ./tests/e2e.sh</code> — optional <code>NXS_E2E_TARGET=127.0.0.1:21</code> for live target.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../nxs/contract.html"><span class="label">Previous</span><span class="title">← Contract</span></a>
+<a class="next" href="../nxs/custom-nxs.html"><span class="label">Next</span><span class="title">Custom NXS →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

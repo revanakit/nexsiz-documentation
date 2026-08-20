@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Custom NXS. Official documentation."/>
 <title>Custom NXS — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -40,7 +41,7 @@
 <a class="nav-link" href="../nxs/overview.html">Overview</a>
 <a class="nav-link" href="../nxs/contract.html">Contract</a>
 <a class="nav-link" href="../nxs/official-set.html">Official Set</a>
-<a class="nav-link" href="../nxs/custom-nxs.html">Custom NXS</a></div>
+<a class="nav-link active" href="../nxs/custom-nxs.html">Custom NXS</a></div>
 <div class="nav-section"><span class="nav-section-title">Reference</span>
 <a class="nav-link" href="../reference/cli.html">CLI</a>
 <a class="nav-link" href="../reference/config.html">Config File</a>
@@ -72,11 +73,76 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>NXS<span>/</span>Custom NXS</div>
-<div class="page-header"><h1>Custom NXS</h1><p class="lead">Templates, build, search path, and contract compliance.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Custom NXS</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Custom NXS</h1><p class="lead">Templates, nxs.toml, checklist, and wiring into search path.</p></div>
+
+<p>Custom NXS extend the official set without changing the fuzzer core. They must obey <a href="../nxs/contract.html">CONTRACT.md</a>.</p>
+
+<h2>Templates</h2>
+<p>Shipped under <code>nxs/templates/</code>: <strong>rust</strong>, <strong>c</strong>, <strong>go</strong>, <strong>python</strong>. Each includes <code>nxs.toml</code> and a minimal entrypoint.</p>
+
+<div class="code-block">
+<pre><code>cp -r nxs/templates/rust ~/.nexsiz/nxs/src/my-chain
+cd ~/.nexsiz/nxs/src/my-chain
+# edit src/main.rs + nxs.toml (stable id, categories, events)
+cargo build --release
+mkdir -p ~/.nexsiz/nxs/bin
+cp target/release/nxs-* ~/.nexsiz/nxs/bin/
+chmod +x ~/.nexsiz/nxs/bin/nxs-*
+</code></pre>
+</div>
+
+<h2>nxs.toml skeleton</h2>
+<div class="code-block">
+<pre><code>id = "custom/my-chain"
+name = "my-chain"
+version = "0.1.0"
+categories = ["custom"]
+events = ["crash", "hang", "interesting"]
+description = "Operator-specific deepening logic."
+language = "rust"
+entry = "bin/nxs-my-chain"
+
+[args]
+# script-specific defaults
+</code></pre>
+</div>
+
+<h2>Checklist</h2>
+<ul>
+<li>Executable (<code>chmod +x</code> / <code>.exe</code>)</li>
+<li>Support <code>--crash</code>, <code>--target</code>, <code>--meta</code>, <code>--out</code>, <code>--help</code>, <code>--version</code></li>
+<li>Honour exit codes 0–4; use ≥10 only for documented script-specific success</li>
+<li>Ignore unknown meta fields</li>
+<li>Do not block on stdin without reason</li>
+<li>Stable <code>id</code> (category/name)</li>
+<li>Recommended: <code>report.json</code> when <code>--out</code> given; <code>-v</code> stderr log; internal timeout</li>
+</ul>
+
+<h2>Wire into Nexsiz</h2>
+<div class="code-block">
+<pre><code># by concrete id
+nexsiz -h 10.0.0.5 -p 21 -m ftp --nxs custom/my-chain -v
+
+# via search path
+export NEXSIZ_NXS_PATH=$HOME/.nexsiz/nxs/bin
+nexsiz --nxs custom/my-chain --nxs-list
+</code></pre>
+</div>
+
+<p>Shared helpers: <code>nxs-lib</code> (<code>Args</code>, <code>Meta</code>, <code>Report</code>, <code>ExitCode</code>) for official Rust NXS — templates may use stdlib-only or link nxs-lib depending on layout.</p>
+
+<div class="callout warn">
+<div class="callout-title">Authorised use</div>
+<p style="margin-bottom:0">Custom NXS that probe authentication or chain behaviour must only run against systems you are authorised to test. See <a href="../security/authorised-use.html">Authorised Use</a>.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../nxs/official-set.html"><span class="label">Previous</span><span class="title">← Official Set</span></a>
+<a class="next" href="../architecture/layers.html"><span class="label">Next</span><span class="title">Layers →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
