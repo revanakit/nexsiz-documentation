@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Mutation. Official documentation."/>
 <title>Mutation — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -31,7 +32,7 @@
 <div class="nav-section"><span class="nav-section-title">Features</span>
 <a class="nav-link" href="../features/protocol-models.html">Protocol Models</a>
 <a class="nav-link" href="../features/integrity-repair.html">Integrity Repair</a>
-<a class="nav-link" href="../features/mutation.html">Mutation</a>
+<a class="nav-link active" href="../features/mutation.html">Mutation</a>
 <a class="nav-link" href="../features/coverage.html">Coverage</a>
 <a class="nav-link" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
 <a class="nav-link" href="../features/encryptor.html">Encryptor</a>
@@ -72,11 +73,91 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Mutation</div>
-<div class="page-header"><h1>Mutation</h1><p class="lead">Hierarchical field / message / sequence mutators.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Mutation</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Mutation</h1><p class="lead">Hierarchical field/message/sequence mutator with energy feedback.</p></div>
+
+<p>The hierarchical mutator produces child <code>TestCase</code> instances from parents and the active <code>ProtocolModel</code>. It prioritises structure-aware edits (field / message / sequence) over pure random streams, with optional dictionary and template synthesis and energy feedback on interesting outcomes.</p>
+
+<div class="callout info">
+<div class="callout-title">Module</div>
+<p style="margin-bottom:0"><code>src/input/mutator.rs</code> — <code>Mutator::mutate</code>. Defaults from <code>MutatorConfig</code> in <code>src/common/config.rs</code>.</p>
+</div>
+
+<h2>Configuration</h2>
+<table>
+<thead><tr><th>Key / param</th><th>Default</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>max_mutations</code></td><td><code>8</code></td><td>Upper bound on mutation ops per child</td></tr>
+<tr><td><code>hierarchical_prob</code></td><td><code>0.15</code></td><td>Probability of sequence-level ops when multiple messages exist</td></tr>
+<tr><td><code>field_prob</code></td><td><code>0.70</code></td><td>Bias toward field-level vs message-level branch</td></tr>
+<tr><td><code>dict_prob</code></td><td><code>0.25</code></td><td>Dictionary / spec-value injection probability</td></tr>
+<tr><td><code>template_prob</code></td><td><code>0.12</code></td><td>Splice synthesised MessageSpec / SequenceSpec</td></tr>
+<tr><td>repair (internal)</td><td>on when integrity enabled</td><td>Call <code>integrity::prepare_for_send</code> after mutations</td></tr>
+<tr><td><code>rng_seed</code></td><td>—</td><td>Deterministic XorShift64 seed via <code>-r</code></td></tr>
+</tbody>
+</table>
+
+<div class="code-block">
+<pre><code># config excerpt
+hierarchical_prob=0.15
+field_prob=0.70
+dict_prob=0.25
+template_prob=0.12
+max_mutations=8
+rng_seed=42
+</code></pre>
+</div>
+
+<h2>Mutation levels</h2>
+<ol>
+<li><strong>Template splice</strong> (optional) — synthesise from <code>MessageSpec</code> / <code>SequenceSpec</code> and replace/insert into the test case.</li>
+<li><strong>Sequence-level</strong> — duplicate, remove, swap, or truncate messages in multi-message cases.</li>
+<li><strong>Message-level</strong> — insert/remove non-protected fields; overwrite from dictionary or spec values.</li>
+<li><strong>Field-level</strong> — bit/byte flip, arithmetic, interesting bytes, insert/delete/overwrite, random fill (respecting fixed <code>size</code>).</li>
+</ol>
+
+<p>Length and Checksum fields are avoided as mutation targets at message level; size constraints from <code>FieldSpec</code> are enforced before send. Protected fields are skipped.</p>
+
+<h2>Field-type weights</h2>
+<p>Selection prefers high-signal types (energy multiplies weight after interesting hits):</p>
+<table>
+<thead><tr><th>Type</th><th>Weight</th></tr></thead>
+<tbody>
+<tr><td>Command</td><td>10</td></tr>
+<tr><td>String</td><td>9</td></tr>
+<tr><td>Payload</td><td>8</td></tr>
+<tr><td>Binary</td><td>6</td></tr>
+<tr><td>Numeric</td><td>5</td></tr>
+<tr><td>Custom</td><td>4</td></tr>
+<tr><td>Length</td><td>1</td></tr>
+<tr><td>Checksum</td><td>0 (skipped)</td></tr>
+</tbody>
+</table>
+<p><code>on_interesting()</code> boosts energy for fields touched in the last mutation (cap 64).</p>
+
+<h2>Field operators</h2>
+<ul>
+<li>Bit flip / byte XOR <code>0xff</code></li>
+<li>Arithmetic ± delta on a byte</li>
+<li>Interesting constants: <code>0x00 0x01 0x7f 0x80 0xff 0x20 0x0a 0x0d 0x09</code></li>
+<li>Delete / insert / overwrite spans (when size not fixed)</li>
+<li>Dictionary replace, splice, or append</li>
+</ul>
+
+<h2>Design trade-offs</h2>
+<ul>
+<li>Structure-aware over blind havoc — deeper state-machine reach.</li>
+<li>Integrity repair after mutation keeps length/checksum coherent (disable via <code>-i null</code> for framing-break tests).</li>
+<li>Mutator holds RNG state — not inherently thread-safe; workers own separate instances in the engine.</li>
+</ul>
+
+<div class="page-nav">
+<a class="prev" href="../features/integrity-repair.html"><span class="label">Previous</span><span class="title">← Integrity Repair</span></a>
+<a class="next" href="../features/coverage.html"><span class="label">Next</span><span class="title">Coverage →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

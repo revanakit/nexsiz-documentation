@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Protocol Models. Official documentation."/>
 <title>Protocol Models — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -29,7 +30,7 @@
 <a class="nav-link" href="../architecture/layers.html">Layers</a>
 <a class="nav-link" href="../architecture/data-flow.html">Data Flow</a></div>
 <div class="nav-section"><span class="nav-section-title">Features</span>
-<a class="nav-link" href="../features/protocol-models.html">Protocol Models</a>
+<a class="nav-link active" href="../features/protocol-models.html">Protocol Models</a>
 <a class="nav-link" href="../features/integrity-repair.html">Integrity Repair</a>
 <a class="nav-link" href="../features/mutation.html">Mutation</a>
 <a class="nav-link" href="../features/coverage.html">Coverage</a>
@@ -72,11 +73,109 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Protocol Models</div>
-<div class="page-header"><h1>Protocol Models</h1><p class="lead">Built-in models, JSON field trees, and offline grammar inference.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Protocol Models</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Protocol Models</h1><p class="lead">Built-in and JSON protocol models, field types, and offline inference.</p></div>
+
+<p>Protocol models describe structure — field types, dictionaries, message templates, optional sequences — so mutation stays semantic instead of pure random bytes. Built-in models cover common protocols; JSON models (feature <code>json-model</code>) and offline inference extend the surface without core changes.</p>
+
+<div class="callout info">
+<div class="callout-title">Pipeline position</div>
+<p style="margin-bottom:0"><code>src/input/</code> — models feed the hierarchical mutator; integrity repair runs post-mutation, pre-encrypt. See <a href="../features/mutation.html">Mutation</a> and <a href="../features/integrity-repair.html">Integrity Repair</a>.</p>
+</div>
+
+<h2>Selecting a model</h2>
+<div class="code-block">
+<pre><code>nexsiz -h 127.0.0.1 -p 21 -m ftp -s seeds/ftp -v
+nexsiz -h 10.0.0.5 -p 53 -m dns -P tcp -v
+nexsiz -h 10.0.0.5 -p 1883 -m mqtt -v
+nexsiz -m models/custom-example.json -h 10.0.0.5 -p 9000 -v   # needs --features json-model
+</code></pre>
+</div>
+<p>CLI: <code>-m / --model</code>. Config: <code>model=</code> or <code>protocol_model=</code>. Paths ending in <code>.json</code> or containing <code>/</code> are treated as file paths; bare names are lowercased built-ins.</p>
+
+<h2>Built-in models</h2>
+<table>
+<thead><tr><th>Name</th><th>Notes</th><th>Typical integrity auto-map</th></tr></thead>
+<tbody>
+<tr><td><code>ftp</code></td><td>Text commands, login sequences</td><td><code>ftp</code> (CRLF)</td></tr>
+<tr><td><code>smtp</code></td><td>Text + DATA terminator awareness</td><td><code>smtp</code></td></tr>
+<tr><td><code>http</code></td><td>Request structure, Content-Length</td><td><code>http</code></td></tr>
+<tr><td><code>dns</code></td><td>TCP length prefix + query layout</td><td><code>binary</code></td></tr>
+<tr><td><code>mqtt</code></td><td>Fixed header, remaining length, CONNECT/PUBLISH</td><td><code>binary</code></td></tr>
+<tr><td><code>smb</code></td><td>Binary / CIFS-oriented</td><td><code>binary</code></td></tr>
+<tr><td><code>binary-lp</code></td><td>Generic BE length-prefix + CRC</td><td><code>binary</code></td></tr>
+<tr><td><code>binary-lp-le</code></td><td>Little-endian length-prefix variant</td><td><code>binary-le</code></td></tr>
+<tr><td><code>generic</code></td><td>Minimal structure; dictionary + opaque payloads</td><td><code>default</code></td></tr>
+</tbody>
+</table>
+
+<h2>JSON model schema</h2>
+<p>Shipped examples: <code>models/dns.json</code>, <code>models/mqtt.json</code>, <code>models/binary-lp.json</code>, <code>models/custom-example.json</code>. Requires build feature <code>json-model</code>.</p>
+<table>
+<thead><tr><th>Field</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>name</code></td><td>Model identifier</td></tr>
+<tr><td><code>length_prefixed</code></td><td>Whether frames use length prefixes</td></tr>
+<tr><td><code>length_width</code></td><td>1 / 2 / 4 byte length fields</td></tr>
+<tr><td><code>endian</code></td><td><code>be</code> | <code>le</code></td></tr>
+<tr><td><code>delimiter</code></td><td>Optional delimiter byte / null</td></tr>
+<tr><td><code>checksum</code></td><td>e.g. <code>crc32</code></td></tr>
+<tr><td><code>dictionary</code></td><td>Tokens (strings or <code>\xNN</code> escapes)</td></tr>
+<tr><td><code>messages[]</code></td><td>Named message specs with typed fields</td></tr>
+<tr><td><code>desocket</code></td><td>Optional reset sequences (see Snapshot &amp; Desocket)</td></tr>
+</tbody>
+</table>
+
+<h3>Field types in message specs</h3>
+<table>
+<thead><tr><th>Type</th><th>Role</th></tr></thead>
+<tbody>
+<tr><td><code>Command</code></td><td>Opcodes / verbs; high mutation weight</td></tr>
+<tr><td><code>String</code></td><td>Text payloads</td></tr>
+<tr><td><code>Binary</code> / <code>Payload</code></td><td>Opaque bytes</td></tr>
+<tr><td><code>Numeric</code></td><td>Fixed-width numbers</td></tr>
+<tr><td><code>Length</code></td><td>Repaired to match following payload size</td></tr>
+<tr><td><code>Checksum</code></td><td>Repaired after length (CRC/XOR/etc.)</td></tr>
+</tbody>
+</table>
+
+<div class="code-block">
+<pre><code>// models/binary-lp.json (excerpt)
+{
+  "name": "binary-lp",
+  "length_prefixed": true,
+  "length_width": 2,
+  "endian": "be",
+  "checksum": "crc32",
+  "dictionary": ["\\x00", "\\xff", "\\x00\\x00", "\\xff\\xff"],
+  "messages": [{
+    "name": "frame",
+    "fields": [
+      { "name": "len", "type": "Length", "size": 2, "endian": "be" },
+      { "name": "payload", "type": "Binary" },
+      { "name": "crc", "type": "Checksum", "size": 4 }
+    ]
+  }]
+}
+</code></pre>
+</div>
+
+<h2>Offline inference</h2>
+<p>Derive a model sketch from a seed directory without starting a campaign:</p>
+<div class="code-block">
+<pre><code>nexsiz --infer-model -s seeds/ftp -v
+nexsiz --infer-model -s seeds/custom --infer-out models/inferred.json
+</code></pre>
+</div>
+<p>Infers delimiter, length-prefix heuristics, endian, and dictionary tokens. With <code>json-model</code>, <code>--infer-out</code> writes JSON; otherwise a human-readable dump. Refine the result into a formal model before production campaigns.</p>
+
+<div class="page-nav">
+<a class="prev" href="../architecture/overview.html"><span class="label">Previous</span><span class="title">← Architecture</span></a>
+<a class="next" href="../features/integrity-repair.html"><span class="label">Next</span><span class="title">Integrity Repair →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

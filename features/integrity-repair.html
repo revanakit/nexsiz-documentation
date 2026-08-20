@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Integrity Repair. Official documentation."/>
 <title>Integrity Repair — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -30,7 +31,7 @@
 <a class="nav-link" href="../architecture/data-flow.html">Data Flow</a></div>
 <div class="nav-section"><span class="nav-section-title">Features</span>
 <a class="nav-link" href="../features/protocol-models.html">Protocol Models</a>
-<a class="nav-link" href="../features/integrity-repair.html">Integrity Repair</a>
+<a class="nav-link active" href="../features/integrity-repair.html">Integrity Repair</a>
 <a class="nav-link" href="../features/mutation.html">Mutation</a>
 <a class="nav-link" href="../features/coverage.html">Coverage</a>
 <a class="nav-link" href="../features/snapshot-desocket.html">Snapshot &amp; Desocket</a>
@@ -72,11 +73,69 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Features<span>/</span>Integrity Repair</div>
-<div class="page-header"><h1>Integrity Repair</h1><p class="lead">Length, checksum, framing, and terminator restoration.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Integrity Repair</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Integrity Repair</h1><p class="lead">Length, checksum, and framing repair before send.</p></div>
+
+<p>After mutation, Nexsiz repairs length, checksum, and framing so test cases remain wire-plausible enough to exercise deep protocol state. Repair is protocol-aware, plugin-selectable, and can auto-follow the active model name.</p>
+
+<div class="callout info">
+<div class="callout-title">Order of operations</div>
+<p style="margin-bottom:0">Mutate → <strong>integrity <code>prepare_for_send</code></strong> → optional encryptor → send. Documented in <code>src/input/readme.txt</code> and implemented in <code>src/input/integrity.rs</code> + <code>src/plugin/integrity.rs</code>.</p>
+</div>
+
+<h2>CLI / config</h2>
+<div class="code-block">
+<pre><code>nexsiz -m http -i http -h 127.0.0.1 -p 80 -v
+nexsiz -m ftp -i null ...          # disable repair (raw byte path)
+# config
+integrity=default
+</code></pre>
+</div>
+<p>Flags: <code>-i</code> / <code>--int</code> / <code>--integrity</code>. Config keys: <code>integrity</code>, <code>integrity_plugin</code>.</p>
+
+<h2>Plugins</h2>
+<table>
+<thead><tr><th>Name</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td><code>default</code></td><td>Semantic Length / Checksum fields; generic prepare</td></tr>
+<tr><td><code>null</code> / <code>none</code></td><td>No-op — pure mutated bytes</td></tr>
+<tr><td><code>http</code> / <code>https</code></td><td>Content-Length rewrite, header/body split, CRLF normalization; respects chunked TE</td></tr>
+<tr><td><code>ftp</code></td><td>CRLF line normalization</td></tr>
+<tr><td><code>smtp</code></td><td>CRLF + DATA terminator (<code>\r\n.\r\n</code>) awareness</td></tr>
+<tr><td><code>binary</code></td><td>Length-prefix + CRC32, big-endian (aliases: <code>bin</code>, <code>binary-lp</code>, <code>dns</code>, <code>mqtt</code>, <code>smb</code>)</td></tr>
+<tr><td><code>binary-le</code></td><td>Same, little-endian (<code>bin-le</code>, <code>binary-lp-le</code>, <code>lp-le</code>)</td></tr>
+</tbody>
+</table>
+
+<p>Unknown names fall back to <code>default</code>. When integrity is unset or <code>default</code>, <code>resolve_integrity_for_protocol</code> selects from the protocol model name (e.g. <code>dns</code>/<code>mqtt</code>/<code>smb</code> → binary).</p>
+
+<h2>Semantic field repair</h2>
+<ol>
+<li><strong>Length fields</strong> — rewritten to the size of subsequent payload fields.</li>
+<li><strong>Checksum fields</strong> — recomputed over all other fields. Algorithms: additive, XOR, CRC-16/CCITT-FALSE, CRC-32/ISO-HDLC, one's-complement. Default path auto-picks by field width (1→XOR, 2→CRC16, 4→CRC32).</li>
+</ol>
+<p>Endianness: BE by default; binary-le path uses LE for 2/4-byte fields.</p>
+
+<h2>Protocol raw heuristics</h2>
+<ul>
+<li><strong>HTTP</strong> — fix or insert <code>Content-Length</code>; normalize header CRLFs; leave chunked bodies alone when <code>Transfer-Encoding: chunked</code>.</li>
+<li><strong>FTP</strong> — rejoin logical lines with CRLF.</li>
+<li><strong>SMTP</strong> — CRLF termination; append DATA end marker when missing on large buffers containing DATA.</li>
+<li><strong>Binary / generic</strong> — heuristic 1/2/4-byte length-prefix rewrite when the first bytes look like a plausible payload length.</li>
+</ul>
+
+<div class="callout warn">
+<div class="callout-title">When to use null</div>
+<p style="margin-bottom:0">Use <code>-i null</code> for intentional framing-break campaigns (parser rejection paths). For state-machine depth, keep model-matched repair enabled.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../features/protocol-models.html"><span class="label">Previous</span><span class="title">← Protocol Models</span></a>
+<a class="next" href="../features/mutation.html"><span class="label">Next</span><span class="title">Mutation →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
