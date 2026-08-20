@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — CLI Reference. Official documentation."/>
 <title>CLI Reference — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -42,7 +43,7 @@
 <a class="nav-link" href="../nxs/official-set.html">Official Set</a>
 <a class="nav-link" href="../nxs/custom-nxs.html">Custom NXS</a></div>
 <div class="nav-section"><span class="nav-section-title">Reference</span>
-<a class="nav-link" href="../reference/cli.html">CLI</a>
+<a class="nav-link active" href="../reference/cli.html">CLI</a>
 <a class="nav-link" href="../reference/config.html">Config File</a>
 <a class="nav-link" href="../reference/environment.html">Environment</a>
 <a class="nav-link" href="../reference/exit-codes.html">Exit Codes</a></div>
@@ -72,11 +73,160 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Reference<span>/</span>CLI Reference</div>
-<div class="page-header"><h1>CLI Reference</h1><p class="lead">Complete command-line interface with aliases.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>CLI Reference</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>CLI Reference</h1><p class="lead">Complete command-line interface with aliases and examples.</p></div>
+
+<p>Complete CLI for <strong>Nexsiz</strong> v0.1.0. Source of truth: <code>src/main.rs</code> (<code>print_usage</code> + <code>parse_args</code>) and <code>nexsiz-command.md</code>.</p>
+<div class="code-block"><pre><code>nexsiz [OPTIONS]</code></pre></div>
+
+<h2>Target</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>-h</code>, <code>--host &lt;ADDR&gt;</code></td><td>Target host</td><td><code>127.0.0.1</code></td></tr>
+<tr><td><code>-p</code>, <code>--port &lt;PORT&gt;</code></td><td>Target port</td><td><code>80</code></td></tr>
+<tr><td><code>-P</code>, <code>--proto</code>, <code>--protocol &lt;PROTO&gt;</code></td><td>Transport: <code>tcp</code> | <code>udp</code></td><td><code>tcp</code></td></tr>
+<tr><td><code>-t</code>, <code>--cmd</code>, <code>--target-cmd &lt;CMD&gt;</code></td><td>Spawn target for crash monitor / snapshot</td><td>—</td></tr>
+<tr><td><code>-T</code>, <code>--timeout</code>, <code>--timeout-ms &lt;MS&gt;</code></td><td>Per-operation timeout (ms)</td><td><code>500</code></td></tr>
+</tbody>
+</table>
+
+<h2>Protocol &amp; plugins</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>-m</code>, <code>--model &lt;NAME&gt;</code></td><td><code>ftp</code> | <code>smtp</code> | <code>http</code> | <code>generic</code> | <code>dns</code> | <code>mqtt</code> | <code>smb</code> | <code>binary-lp</code> | <code>binary-lp-le</code> | path/to/model.json</td></tr>
+<tr><td><code>-O</code>, <code>--oracle &lt;NAME&gt;</code></td><td><code>default</code> | <code>strict</code> | <code>crash</code> | <code>hang</code> | <code>coverage</code> | <code>differential</code> | <code>sanitizer</code> | <code>diffsan</code> | <code>expanded</code></td></tr>
+<tr><td><code>-i</code>, <code>--int</code>, <code>--integrity &lt;NAME&gt;</code></td><td><code>default</code> | <code>http</code> | <code>ftp</code> | <code>smtp</code> | <code>binary</code> | <code>binary-le</code> | <code>null</code></td></tr>
+<tr><td><code>-e</code>, <code>--enc</code>, <code>--encryptor &lt;NAME&gt;</code></td><td><code>null</code> | <code>xor</code> | <code>chacha20</code> | <code>tls-record</code> | <code>chacha20+tls</code> | <code>xor+tls</code></td></tr>
+<tr><td><code>-k</code>, <code>--key</code>, <code>--enc-key &lt;KEY&gt;</code></td><td>Encryptor key (hex <code>0x…</code> or raw string)</td></tr>
+</tbody>
+</table>
+
+<h3>Oracle notes</h3>
+<table>
+<thead><tr><th>Name</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td><code>differential</code></td><td>Multi-dimensional behavioural divergence</td></tr>
+<tr><td><code>sanitizer</code></td><td>ASan/UBSan patterns, length anomaly, null-byte, protocol violation</td></tr>
+<tr><td><code>diffsan</code></td><td>differential + sanitizer + coverage (recommended deep campaigns)</td></tr>
+<tr><td><code>expanded</code></td><td>diffsan + error oracle (maximum sensitivity)</td></tr>
+</tbody>
+</table>
+
+<h2>Model inference (offline)</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--infer-model</code></td><td>Infer protocol model from <code>-s</code> seed directory and exit</td></tr>
+<tr><td><code>--infer-out &lt;PATH&gt;</code></td><td>Write inferred model (JSON with <code>json-model</code>, else human dump)</td></tr>
+</tbody>
+</table>
+<div class="code-block"><pre><code>nexsiz --infer-model -s seeds/ftp -v
+nexsiz --infer-model -s seeds/custom --infer-out models/inferred.json
+</code></pre></div>
+
+<h2>Coverage</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>-C</code>, <code>--cov</code>, <code>--coverage &lt;NAME&gt;</code></td><td><code>null</code> | <code>map</code> | <code>software</code></td><td><code>null</code></td></tr>
+<tr><td><code>-S</code>, <code>--shm</code>, <code>--coverage-shm &lt;ID&gt;</code></td><td>SHM id for Frida (<code>/nexsiz-cov-&lt;ID&gt;</code>)</td><td>—</td></tr>
+</tbody>
+</table>
+<p>Environment: <code>NEXSIZ_SHM_ID</code>.</p>
+
+<h2>Campaign control</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>-w</code>, <code>--workers &lt;N&gt;</code></td><td>Worker threads</td><td>#cores</td></tr>
+<tr><td><code>-s</code>, <code>--seed</code>, <code>--seed-dir &lt;DIR&gt;</code></td><td>Seed directory</td><td><code>seeds</code></td></tr>
+<tr><td><code>-o</code>, <code>--out</code>, <code>--output-dir &lt;DIR&gt;</code></td><td>Output directory</td><td><code>output</code></td></tr>
+<tr><td><code>-c</code>, <code>--config &lt;FILE&gt;</code></td><td>Load key=value config file</td><td>—</td></tr>
+<tr><td><code>-Y</code>, <code>--rpc</code>, <code>--python-rpc &lt;PATH&gt;</code></td><td>Unix socket for Python/RPC</td><td>—</td></tr>
+<tr><td><code>-n</code>, <code>--no-reuse</code></td><td>Disable connection reuse</td><td>reuse on</td></tr>
+<tr><td><code>-r</code>, <code>--rng</code>, <code>--rng-seed &lt;N&gt;</code></td><td>Deterministic RNG seed</td><td>—</td></tr>
+<tr><td><code>-L</code>, <code>--libafl</code></td><td>LibAFL path (needs <code>--features libafl</code>)</td><td>native</td></tr>
+</tbody>
+</table>
+
+<h2>Snapshot</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>-Z</code>, <code>--snapshot</code></td><td>Enable process snapshot / restore</td><td>off</td></tr>
+<tr><td><code>--snapshot-backend &lt;B&gt;</code></td><td><code>null</code> | <code>process</code> | <code>criu</code></td><td><code>process</code> when <code>-Z</code></td></tr>
+</tbody>
+</table>
+<ul>
+<li><code>process</code> — kill + respawn (requires <code>-t</code>)</li>
+<li><code>criu</code> — needs <code>--features criu</code> and <code>criu</code> on <code>PATH</code></li>
+</ul>
+
+<h2>Execution limits</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>-x</code>, <code>--execs</code>, <code>--max-execs &lt;N&gt;</code></td><td>Stop after N executions</td></tr>
+<tr><td><code>-R</code>, <code>--runtime</code>, <code>--max-runtime &lt;SECS&gt;</code></td><td>Stop after SECS seconds</td></tr>
+</tbody>
+</table>
+
+<h2>NXS</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>--nxs &lt;EXPR&gt;</code></td><td>Set: <code>default</code>, <code>crash</code>, <code>hang</code>, <code>safe</code>, <code>intrusive</code>, <code>external</code>, or concrete ids</td><td>disabled</td></tr>
+<tr><td><code>--nxs-path &lt;DIRS&gt;</code></td><td>Extra colon-separated search paths</td><td>—</td></tr>
+<tr><td><code>--nxs-cooldown &lt;SECS&gt;</code></td><td>Cooldown per (event, crash, nxs)</td><td><code>30</code></td></tr>
+<tr><td><code>--nxs-max-per-event &lt;N&gt;</code></td><td>Cap per event (<code>0</code> = unlimited)</td><td><code>0</code></td></tr>
+<tr><td><code>--nxs-max-total &lt;N&gt;</code></td><td>Cap total spawns (<code>0</code> = unlimited)</td><td><code>0</code></td></tr>
+<tr><td><code>--nxs-list</code></td><td>Resolve set, print found/missing, exit</td><td>—</td></tr>
+</tbody>
+</table>
+<p>Env: <code>NEXSIZ_NXS</code>, <code>NEXSIZ_NXS_PATH</code>. Default events: <code>crash</code>, <code>hang</code>.</p>
+
+<h2>General</h2>
+<table>
+<thead><tr><th>Flag</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>-v</code>, <code>--verbose</code></td><td>Verbose logging</td></tr>
+<tr><td><code>-?</code>, <code>--help</code></td><td>Show help</td></tr>
+<tr><td><code>-V</code>, <code>--version</code></td><td>Show version</td></tr>
+</tbody>
+</table>
+
+<h2>Examples</h2>
+<div class="code-block"><pre><code># Basic FTP
+nexsiz -h 127.0.0.1 -p 21 -m ftp -s seeds/ftp -o out/ftp -v
+
+# DNS / MQTT / SMB
+nexsiz -h 10.0.0.5 -p 53  -m dns  -P tcp -v
+nexsiz -h 10.0.0.5 -p 1883 -m mqtt -v
+nexsiz -h 10.0.0.5 -p 445  -m smb  -v
+
+# NXS
+nexsiz -h 127.0.0.1 -p 21 -m ftp --nxs default -v
+nexsiz --nxs default --nxs-list
+
+# Coverage + RPC
+nexsiz -h 127.0.0.1 -p 21 -m ftp -C map --shm demo -Y /tmp/nexsiz.sock -v
+
+# Snapshot
+nexsiz -t "./target_daemon" -Z --snapshot-backend process -m ftp -v
+
+# LibAFL (needs --features libafl)
+nexsiz -h 127.0.0.1 -p 21 -m ftp -L -v
+</code></pre></div>
+
+<div class="page-nav">
+<a class="prev" href="../guide/configuration.html"><span class="label">Previous</span><span class="title">← Configuration</span></a>
+<a class="next" href="../architecture/overview.html"><span class="label">Next</span><span class="title">Architecture →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
