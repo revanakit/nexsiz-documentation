@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>NXS Contract — Nexsiz</title>
+<meta name="description" content="Nexsiz — Contract. Official documentation."/>
+<title>Contract — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <link rel="stylesheet" href="../assets/css/main.css"/>
@@ -38,7 +39,7 @@
 <a class="nav-link" href="../features/oracles.html">Oracles</a></div>
 <div class="nav-section"><span class="nav-section-title">NXS</span>
 <a class="nav-link" href="../nxs/overview.html">Overview</a>
-<a class="nav-link" href="../nxs/contract.html">Contract</a>
+<a class="nav-link active" href="../nxs/contract.html">Contract</a>
 <a class="nav-link" href="../nxs/official-set.html">Official Set</a>
 <a class="nav-link" href="../nxs/custom-nxs.html">Custom NXS</a></div>
 <div class="nav-section"><span class="nav-section-title">Reference</span>
@@ -71,12 +72,95 @@
 </div>
 </header>
 <main class="content"><div class="content-inner">
-<div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>NXS<span>/</span>NXS Contract</div>
-<div class="page-header"><h1>NXS Contract</h1><p class="lead">Binding invocation, exit codes, meta JSON, and artefact layout.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>NXS Contract</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>NXS<span>/</span>Contract</div>
+<div class="page-header"><h1>Contract</h1><p class="lead">Binding invocation, exit codes, meta schema, and identity rules.</p></div>
+
+<p>Binding contract for all official and custom NXS. Source: <code>nxs/CONTRACT.md</code> (v0.1). Breaking changes increment major version; additive fields stay compatible within the same major.</p>
+
+<div class="callout warn">
+<div class="callout-title">Mandatory</div>
+<p style="margin-bottom:0">Every NXS must be executable, support global options below, honour the exit-code table, ignore unknown meta fields, and expose a stable <code>id</code>.</p>
+</div>
+
+<h2>Invocation</h2>
+<div class="code-block">
+<pre><code>nxs-&lt;name&gt; [GLOBAL OPTIONS] [SCRIPT-SPECIFIC OPTIONS]
+</code></pre>
+</div>
+
+<table>
+<thead><tr><th>Option</th><th>Required</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td><code>--crash &lt;path&gt;</code></td><td>Yes*</td><td>Input that caused the event</td></tr>
+<tr><td><code>--target &lt;host:port&gt;</code></td><td>Yes*</td><td>e.g. <code>10.0.0.5:21</code></td></tr>
+<tr><td><code>--event &lt;type&gt;</code></td><td>No</td><td><code>crash</code> | <code>hang</code> | <code>interesting</code> | <code>new_coverage</code> | <code>new_state</code></td></tr>
+<tr><td><code>--model &lt;name&gt;</code></td><td>No</td><td>Protocol model</td></tr>
+<tr><td><code>--minimized &lt;path&gt;</code></td><td>No</td><td>Minimised crash input</td></tr>
+<tr><td><code>--meta &lt;path&gt;</code></td><td>No</td><td>JSON metadata from Nexsiz</td></tr>
+<tr><td><code>--out &lt;dir&gt;</code></td><td>No</td><td>Artefact directory</td></tr>
+<tr><td><code>--timeout &lt;secs&gt;</code></td><td>No</td><td>Internal timeout</td></tr>
+<tr><td><code>-v</code> / <code>--verbose</code></td><td>No</td><td>Human log on stderr</td></tr>
+<tr><td><code>--help</code> / <code>-h</code></td><td>Yes</td><td>Usage</td></tr>
+<tr><td><code>--version</code></td><td>Yes</td><td>Version + stable id</td></tr>
+</tbody>
+</table>
+<p>* At least one of <code>--crash</code> or <code>--meta</code> must be present. Meta may supply <code>crash.path</code> and target.</p>
+
+<h2>Exit codes</h2>
+<table>
+<thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>0</code></td><td>Completed; no further vulnerability indication</td></tr>
+<tr><td><code>1</code></td><td>Operational error</td></tr>
+<tr><td><code>2</code></td><td><strong>Escalate</strong> — further vulnerability / exploit-assist</td></tr>
+<tr><td><code>3</code></td><td>Internal timeout</td></tr>
+<tr><td><code>4</code></td><td>Interrupted / cancelled</td></tr>
+<tr><td><code>≥10</code></td><td>Script-specific success variants (document in <code>nxs.toml</code>)</td></tr>
+</tbody>
+</table>
+<p>See also <a href="../reference/exit-codes.html">Exit Codes</a>.</p>
+
+<h2>Metadata JSON</h2>
+<p>Nexsiz writes meta on spawn. Minimal fields include <code>nexsiz_version</code>, <code>event</code>, <code>timestamp</code>, <code>target</code>, <code>model</code>, <code>crash</code>, <code>result</code>, <code>worker_id</code>, <code>output_dir</code>. Unknown fields must be ignored.</p>
+
+<h2>Artefacts (recommended)</h2>
+<div class="code-block">
+<pre><code>&lt;out&gt;/
+├── report.json
+├── repro/
+├── logs/
+└── artifacts/
+</code></pre>
+</div>
+<p><code>report.json</code> should carry <code>nxs_id</code>, <code>exit_hint</code>, <code>summary</code>, <code>findings</code>, <code>artifacts</code>.</p>
+
+<h2>Stdio</h2>
+<ul>
+<li><strong>stdout</strong> — concise; optional final JSON line</li>
+<li><strong>stderr</strong> — human progress/errors (<code>-v</code>)</li>
+<li><strong>stdin</strong> — not required; <code>--meta -</code> may read meta from stdin</li>
+</ul>
+
+<h2>Identity (nxs.toml)</h2>
+<table>
+<thead><tr><th>Field</th><th>Example</th></tr></thead>
+<tbody>
+<tr><td><code>id</code></td><td><code>crash/auto-repro</code></td></tr>
+<tr><td><code>name</code></td><td><code>auto-repro</code></td></tr>
+<tr><td><code>version</code></td><td><code>1.0.0</code></td></tr>
+<tr><td><code>categories</code></td><td><code>crash,safe,default</code></td></tr>
+<tr><td><code>events</code></td><td><code>crash,hang</code></td></tr>
+<tr><td><code>description</code></td><td>one paragraph</td></tr>
+</tbody>
+</table>
+
+<div class="page-nav">
+<a class="prev" href="../nxs/overview.html"><span class="label">Previous</span><span class="title">← NXS Overview</span></a>
+<a class="next" href="../nxs/official-set.html"><span class="label">Next</span><span class="title">Official Set →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

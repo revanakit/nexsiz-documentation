@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — NXS Overview. Official documentation."/>
 <title>NXS Overview — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -37,7 +38,7 @@
 <a class="nav-link" href="../features/encryptor.html">Encryptor</a>
 <a class="nav-link" href="../features/oracles.html">Oracles</a></div>
 <div class="nav-section"><span class="nav-section-title">NXS</span>
-<a class="nav-link" href="../nxs/overview.html">Overview</a>
+<a class="nav-link active" href="../nxs/overview.html">Overview</a>
 <a class="nav-link" href="../nxs/contract.html">Contract</a>
 <a class="nav-link" href="../nxs/official-set.html">Official Set</a>
 <a class="nav-link" href="../nxs/custom-nxs.html">Custom NXS</a></div>
@@ -72,11 +73,87 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>NXS<span>/</span>NXS Overview</div>
-<div class="page-header"><h1>NXS Overview</h1><p class="lead">Existence after discovery — post-event executable actors.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>NXS Overview</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>NXS Overview</h1><p class="lead">Post-event existence scripts: enable, sets, rate limits, async reaper.</p></div>
+
+<p><strong>NXS</strong> (Nexsiz Existence Scripts) are post-event <em>executable</em> actors — not passive handlers. After discovery (crash, hang, interesting, coverage/state), Nexsiz can spawn them asynchronously to deepen, confirm, or notify.</p>
+
+<div class="code-block">
+<pre><code>Nexsiz (discovery)  →  crash / hang / interesting  →  NXS (existence &amp; depth)
+</code></pre>
+</div>
+
+<div class="callout info">
+<div class="callout-title">Default off</div>
+<p style="margin-bottom:0">NXS is disabled until <code>--nxs</code> / <code>NEXSIZ_NXS</code> / config <code>nxs=</code> enables a set. Zero behaviour change when off.</p>
+</div>
+
+<h2>Enable</h2>
+<div class="code-block">
+<pre><code>nexsiz -h 10.0.0.5 -p 21 -m ftp --nxs default -v
+nexsiz --nxs default --nxs-list
+nexsiz ... --nxs intrusive --nxs-cooldown 60 --nxs-max-per-event 20 -v
+nexsiz ... --nxs crash/auto-repro -v
+export NEXSIZ_NXS=default
+export NEXSIZ_NXS_PATH=$HOME/.nexsiz/nxs/bin:./nxs/bin
+</code></pre>
+</div>
+
+<h2>Sets (from categories.toml)</h2>
+<table>
+<thead><tr><th>Expression</th><th>Members (summary)</th></tr></thead>
+<tbody>
+<tr><td><code>default</code> / <code>safe</code></td><td><code>crash/auto-repro</code>, <code>crash/save-notify</code></td></tr>
+<tr><td><code>crash</code></td><td>Full crash family including intrusive probes</td></tr>
+<tr><td><code>hang</code></td><td><code>hang/timeout-analyzer</code></td></tr>
+<tr><td><code>intrusive</code></td><td>differential, state-diff, coverage-probe, auth-*, chain-repro</td></tr>
+<tr><td><code>external</code></td><td><code>external/notify-webhook</code></td></tr>
+<tr><td>Concrete id</td><td>e.g. <code>crash/chain-repro</code></td></tr>
+</tbody>
+</table>
+
+<h2>Rate limits</h2>
+<table>
+<thead><tr><th>Flag</th><th>Default</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>--nxs-cooldown</code></td><td>30s</td><td>Per (event, crash_id, nxs_id)</td></tr>
+<tr><td><code>--nxs-max-per-event</code></td><td>0 (∞)</td><td>Cap per event type</td></tr>
+<tr><td><code>--nxs-max-total</code></td><td>0 (∞)</td><td>Cap total spawns</td></tr>
+</tbody>
+</table>
+<p>Default events: <code>crash</code>, <code>hang</code> (override with config <code>nxs_events=</code>).</p>
+
+<h2>Async spawn &amp; reaper</h2>
+<p>Spawn is <strong>non-blocking</strong>. A background reaper (<code>src/nxs/reaper.rs</code>) polls children with <code>try_wait</code>:</p>
+<ul>
+<li>Every exit logged: <code>[nexsiz/nxs] exit &lt;id&gt; → &lt;code&gt;</code></li>
+<li><strong>Exit 2</strong> escalated as secondary finding → status <code>nxs_sec</code>, JSONL under <code>{output}/nxs-findings/secondary.jsonl</code>, optional sidecar under NXS <code>--out</code></li>
+<li>Fuzzer hot-path never waits on NXS; zombies reaped only by the reaper thread</li>
+</ul>
+
+<h2>Search path</h2>
+<ol>
+<li>Absolute path in <code>--nxs</code></li>
+<li><code>NEXSIZ_NXS_PATH</code> / <code>--nxs-path</code></li>
+<li><code>~/.nexsiz/nxs/bin/</code></li>
+<li><code>./nxs/bin/</code></li>
+<li>Relative to nexsiz install / source tree</li>
+</ol>
+
+<h2>Build official binaries</h2>
+<div class="code-block">
+<pre><code>cd nxs && ./build.sh
+# → nxs/bin/nxs-*
+cd nxs && ./tests/e2e.sh
+</code></pre>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../features/oracles.html"><span class="label">Previous</span><span class="title">← Oracles</span></a>
+<a class="next" href="../nxs/contract.html"><span class="label">Next</span><span class="title">Contract →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
