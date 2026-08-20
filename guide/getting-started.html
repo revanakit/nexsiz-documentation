@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Getting Started. Official documentation."/>
 <title>Getting Started — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -20,7 +21,7 @@
 <nav class="sidebar-nav">
 <div class="nav-section"><span class="nav-section-title">Start</span>
 <a class="nav-link" href="../index.html">Overview</a>
-<a class="nav-link" href="../guide/getting-started.html">Getting Started</a>
+<a class="nav-link active" href="../guide/getting-started.html">Getting Started</a>
 <a class="nav-link" href="../guide/installation.html">Installation</a>
 <a class="nav-link" href="../guide/quickstart.html">Quick Start</a>
 <a class="nav-link" href="../guide/configuration.html">Configuration</a></div>
@@ -72,11 +73,94 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Start<span>/</span>Getting Started</div>
-<div class="page-header"><h1>Getting Started</h1><p class="lead">Install, build, and run your first Nexsiz campaign.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Getting Started</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Getting Started</h1><p class="lead">Path from zero to a running Nexsiz campaign against an authorised target.</p></div>
+
+<div class="callout warning">
+<div class="callout-title">Authorised use only</div>
+Nexsiz is an offensive network protocol fuzzer. Run exclusively against targets you are explicitly authorised to test, in isolated environments. See <a href="../security/authorised-use.html">Authorised Use</a>.
+</div>
+
+<h2>What you will do</h2>
+<ol>
+<li>Install a supported Rust toolchain and build the release binary.</li>
+<li>Prepare a minimal seed corpus for the protocol under test.</li>
+<li>Launch a bounded campaign and inspect the output tree.</li>
+</ol>
+
+<h2>Prerequisites</h2>
+<table>
+<thead><tr><th>Requirement</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>Linux x86_64</td><td>Primary platform. Frida SHM coverage and CRIU are Linux-only.</td></tr>
+<tr><td>Rust 1.87.0+</td><td>Pinned in <code>rust-toolchain.toml</code>. Required for full feature set (LibAFL).</td></tr>
+<tr><td>Network path to target</td><td>TCP or UDP reachability; no privilege escalation required for remote fuzzing.</td></tr>
+<tr><td>Authorisation</td><td>Written scope / ROE for the target.</td></tr>
+</tbody>
+</table>
+
+<h2>Fast path</h2>
+<div class="code-block">
+<pre><code># Clone and build (default features — libc only)
+git clone https://github.com/revanakit/nexsiz.git
+cd nexsiz
+cargo build --release
+
+# Minimal FTP seed
+mkdir -p seeds/ftp
+printf 'USER anonymous\r\nPASS guest\r\nPWD\r\nQUIT\r\n' > seeds/ftp/login.txt
+
+# Bounded campaign (50k execs) against local FTP
+./target/release/nexsiz \
+  -h 127.0.0.1 -p 21 -m ftp \
+  -s seeds/ftp -o output/ftp \
+  -v -x 50000
+</code></pre>
+</div>
+
+<p>Equivalent via Makefile (uses sample seeds under <code>sample/seeds/</code>):</p>
+<div class="code-block">
+<pre><code>make release
+make campaign-ftp HOST=127.0.0.1
+</code></pre>
+</div>
+
+<h2>What the binary does</h2>
+<p>Nexsiz is a <strong>stateful network protocol fuzzer</strong>. Each execution mutates structured protocol input, repairs integrity fields (length, checksum, framing), sends over TCP/UDP, observes the response, and feeds coverage / oracle signals back into scheduling.</p>
+<ul>
+<li><strong>Precision over volume</strong> — semantic mutation that respects protocol grammar</li>
+<li><strong>Integrity repair</strong> — post-mutation length/checksum/terminator restoration</li>
+<li><strong>Hybrid feedback</strong> — black-box response observation + optional grey-box edge coverage</li>
+<li><strong>NXS</strong> — optional post-event actors (repro, differential probe, chain analysis) without bloating the core</li>
+</ul>
+
+<h2>Next steps</h2>
+<div class="feature-grid">
+<div class="feature-card">
+<h3><a href="../guide/installation.html">Installation</a></h3>
+<p>Toolchain pin, feature flags (<code>libafl</code>, <code>json-model</code>, <code>criu</code>), Make targets.</p>
+</div>
+<div class="feature-card">
+<h3><a href="../guide/quickstart.html">Quick Start</a></h3>
+<p>Seed layout, first campaigns (FTP/DNS/MQTT/SMB), output tree, cleanup.</p>
+</div>
+<div class="feature-card">
+<h3><a href="../guide/configuration.html">Configuration</a></h3>
+<p>Config file format, environment variables, CLI override precedence.</p>
+</div>
+<div class="feature-card">
+<h3><a href="../reference/cli.html">CLI Reference</a></h3>
+<p>Complete flag table with aliases and operational examples.</p>
+</div>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../index.html"><span class="label">Previous</span><span class="title">← Overview</span></a>
+<a class="next" href="../guide/installation.html"><span class="label">Next</span><span class="title">Installation →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
