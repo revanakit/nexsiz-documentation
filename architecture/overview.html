@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Architecture Overview. Official documentation."/>
 <title>Architecture Overview — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -25,7 +26,7 @@
 <a class="nav-link" href="../guide/quickstart.html">Quick Start</a>
 <a class="nav-link" href="../guide/configuration.html">Configuration</a></div>
 <div class="nav-section"><span class="nav-section-title">Architecture</span>
-<a class="nav-link" href="../architecture/overview.html">Overview</a>
+<a class="nav-link active" href="../architecture/overview.html">Overview</a>
 <a class="nav-link" href="../architecture/layers.html">Layers</a>
 <a class="nav-link" href="../architecture/data-flow.html">Data Flow</a></div>
 <div class="nav-section"><span class="nav-section-title">Features</span>
@@ -73,10 +74,93 @@
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Architecture<span>/</span>Architecture Overview</div>
 <div class="page-header"><h1>Architecture Overview</h1><p class="lead">Four-layer design, plugin surface, and NXS integration.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Architecture Overview</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+
+<p>Nexsiz is structured as four cooperating layers plus a plugin surface and an optional NXS post-event plane. Defaults keep the surface minimal: zero behaviour change until features are explicitly enabled.</p>
+
+<div class="code-block">
+<pre><code>┌─────────────────────────────────────────────────────────────────┐
+│                  Monitoring · Oracle · NXS                        │
+│  crash / hang detection · differential &amp; sanitizer oracles       │
+│  minimizer · structured logging · existence-script spawn         │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────┴─────────────────────────────────┐
+│                 Execution &amp; Efficiency Layer                     │
+│  worker pool · intelligent connection reuse · TCP / UDP          │
+│  process monitor · optional LibAFL Executor                      │
+│  snapshot / desocket (ProcessRestart · CRIU · ProtocolReset)     │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────┴─────────────────────────────────┐
+│             State Awareness + Coverage Feedback                  │
+│  hybrid state tracker · adaptive transition predictor            │
+│  CoverageProvider (null | map+shm | software)                    │
+└───────────────────────────────┬─────────────────────────────────┘
+                                │
+┌───────────────────────────────┴─────────────────────────────────┐
+│                      Input Construction                          │
+│  semantic field model · hierarchical mutator                     │
+│  protocol-aware integrity repair pipeline                        │
+│  JSON field trees (feature json-model)                           │
+│  offline grammar inference (--infer-model)                       │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre>
+</div>
+
+<h2>Layer responsibilities</h2>
+<table>
+<thead><tr><th>Layer</th><th>Role</th><th>Key modules</th></tr></thead>
+<tbody>
+<tr><td><strong>Input Construction</strong></td><td>Build and mutate structurally valid protocol bytes</td><td><code>src/input/</code> — model, mutator, integrity, corpus</td></tr>
+<tr><td><strong>State + Coverage</strong></td><td>Track response-derived state; optional grey-box edges</td><td><code>src/state/</code>, <code>src/coverage/</code></td></tr>
+<tr><td><strong>Execution</strong></td><td>Worker pool, transport, reuse, snapshot/desocket</td><td><code>src/execution/</code></td></tr>
+<tr><td><strong>Monitoring / NXS</strong></td><td>Oracles, minimizer, logging, post-event actors</td><td><code>src/monitor/</code>, <code>src/nxs/</code>, <code>nxs/</code></td></tr>
+</tbody>
+</table>
+
+<h2>Plugin surface</h2>
+<p>Trait-based plugins register without core changes:</p>
+<ul>
+<li><strong>Protocol</strong> — ftp, smtp, http, dns, mqtt, smb, binary-lp, generic, JSON models</li>
+<li><strong>Integrity</strong> — length/checksum/framing repair (auto-selected from model when possible)</li>
+<li><strong>Oracle</strong> — crash, hang, coverage, differential, sanitizer, combined modes</li>
+<li><strong>Encryptor</strong> — null, xor, chacha20, tls-record, combinations</li>
+<li><strong>CoverageProvider</strong> — null (default), map (AFL-style 64&nbsp;KiB SHM), software</li>
+<li><strong>SnapshotProvider</strong> — null, ProcessRestart, CRIU (feature-gated)</li>
+</ul>
+
+<h2>Data path (one execution)</h2>
+<ol>
+<li>Select seed / queue entry</li>
+<li>Hierarchical mutation (field / message / sequence)</li>
+<li>Integrity repair (length, checksum, terminators)</li>
+<li>Optional encryptor framing</li>
+<li>Send over TCP/UDP (reuse connection when safe)</li>
+<li>Observe response → state tracker + oracle + coverage</li>
+<li>On crash/hang/interesting: minimise, log, optionally spawn NXS</li>
+</ol>
+
+<h2>Design constraints</h2>
+<ul>
+<li><strong>Minimal default deps</strong> — libc only; LibAFL, JSON models, CRIU behind features</li>
+<li><strong>Zero behaviour change</strong> — snapshot, desocket, NXS, coverage map off by default</li>
+<li><strong>Precision over volume</strong> — semantic mutation + repair before send</li>
+<li><strong>Operator control</strong> — CLI + conf + env; NXS rate limits and cooldowns</li>
+</ul>
+
+<div class="callout info">
+<div class="callout-title">Deeper dives</div>
+See <a href="../architecture/layers.html">Layers</a> and <a href="../architecture/data-flow.html">Data Flow</a> for per-layer detail.
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../reference/cli.html"><span class="label">Previous</span><span class="title">← CLI Reference</span></a>
+<a class="next" href="../architecture/layers.html"><span class="label">Next</span><span class="title">Layers →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
