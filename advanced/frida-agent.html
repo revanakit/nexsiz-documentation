@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Frida Agent. Official documentation."/>
 <title>Frida Agent — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -49,7 +50,7 @@
 <div class="nav-section"><span class="nav-section-title">Advanced</span>
 <a class="nav-link" href="../advanced/libafl.html">LibAFL Path</a>
 <a class="nav-link" href="../advanced/python-rpc.html">Python / RPC</a>
-<a class="nav-link" href="../advanced/frida-agent.html">Frida Agent</a>
+<a class="nav-link active" href="../advanced/frida-agent.html">Frida Agent</a>
 <a class="nav-link" href="../advanced/extending.html">Extending</a></div>
 <div class="nav-section"><span class="nav-section-title">Security</span>
 <a class="nav-link" href="../security/policy.html">Policy</a>
@@ -72,11 +73,97 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Advanced<span>/</span>Frida Agent</div>
-<div class="page-header"><h1>Frida Agent</h1><p class="lead">External grey-box instrumentation via shared-memory edge map.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Frida Agent</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Frida Agent</h1><p class="lead">External grey-box instrumentation — AFL-style 64&nbsp;KiB edge map via shared memory.</p></div>
+
+<p>The Frida agent injects coverage into a platform shared-memory region that Nexsiz’s <code>SharedMapCoverage</code> provider (<code>-C map</code>) owns. Nexsiz clears the map before every execution and harvests hits afterward. One script works on both Linux and Windows.</p>
+
+<div class="callout info">
+<div class="callout-title">Location</div>
+<p style="margin-bottom:0"><code>agents/frida/nexsiz_cov.js</code> + <code>agents/README.md</code>. Pairs with coverage provider <code>map</code> in <code>src/coverage/</code>.</p>
+</div>
+
+<h2>SHM protocol</h2>
+<table>
+<thead><tr><th>Field</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Size</td><td>65536 bytes</td></tr>
+<tr><td>Cell</td><td><code>u8</code> saturating hit count</td></tr>
+<tr><td>Edge</td><td><code>(prev &gt;&gt; 1) ^ cur</code> (AFL classic)</td></tr>
+</tbody>
+</table>
+
+<table>
+<thead><tr><th>Platform</th><th>Default name</th><th>With id</th></tr></thead>
+<tbody>
+<tr><td>Linux</td><td><code>/nexsiz-cov</code></td><td><code>/nexsiz-cov-&lt;id&gt;</code></td></tr>
+<tr><td>Windows</td><td><code>Local\nexsiz-cov</code></td><td><code>Local\nexsiz-cov-&lt;id&gt;</code></td></tr>
+</tbody>
+</table>
+
+<h2>Quick start (Linux)</h2>
+<div class="code-block">
+<pre><code>export NEXSIZ_SHM_ID=demo
+export NEXSIZ_COV_MODULE=mydaemon   # optional module filter
+frida -l agents/frida/nexsiz_cov.js -f ./mydaemon --no-pause
+
+# in another terminal
+export NEXSIZ_SHM_ID=demo
+./target/release/nexsiz -h 127.0.0.1 -p 21 -m ftp -C map -S demo -v
+</code></pre>
+</div>
+
+<h2>Quick start (Windows)</h2>
+<div class="code-block">
+<pre><code>$env:NEXSIZ_SHM_ID = "demo"
+$env:NEXSIZ_COV_MODULE = "mydaemon"
+frida -l agents/frida/nexsiz_cov.js -f .\mydaemon.exe
+
+$env:NEXSIZ_SHM_ID = "demo"
+.\target\release\nexsiz.exe -h 127.0.0.1 -p 21 -m ftp -C map -S demo -v
+</code></pre>
+</div>
+
+<h2>Modes</h2>
+<table>
+<thead><tr><th><code>NEXSIZ_COV_MODE</code></th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td><code>stalker</code> (default)</td><td>Basic-block edge coverage via Frida Stalker</td></tr>
+<tr><td><code>exports</code></td><td>Interceptor on recv/read/send/parse-like exports (includes <code>WSARecv</code>/<code>WSASend</code> on Windows)</td></tr>
+</tbody>
+</table>
+<p>Prefer <code>exports</code> when throughput matters more than block-level resolution.</p>
+
+<h2>Environment variables</h2>
+<table>
+<thead><tr><th>Variable</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>NEXSIZ_SHM_ID</code></td><td>SHM suffix or full name (must match <code>-S</code>)</td></tr>
+<tr><td><code>NEXSIZ_COV_MODULE</code></td><td>Substring filter for Stalker (module name)</td></tr>
+<tr><td><code>NEXSIZ_COV_MODE</code></td><td><code>stalker</code> | <code>exports</code></td></tr>
+</tbody>
+</table>
+
+<h2>Operational notes</h2>
+<ul>
+<li><strong>Linux</strong>: POSIX SHM under <code>/dev/shm/</code>. Clean with <code>rm /dev/shm/nexsiz-cov*</code> or <code>make clean-shm</code>.</li>
+<li><strong>Windows</strong>: Named File Mapping in the <code>Local\</code> namespace (no elevation required). Object survives process exit so both sides can reattach.</li>
+<li>Remote-only targets without a local process cannot use this agent; fall back to <code>-C software</code>.</li>
+<li>The agent and the fuzzer <strong>must</strong> agree on the same <code>NEXSIZ_SHM_ID</code>.</li>
+</ul>
+
+<div class="callout info">
+<div class="callout-title">Precision over noise</div>
+<p style="margin-bottom:0">The map only records what the target actually touches. See also <a href="../features/coverage.html">Coverage</a>.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../advanced/python-rpc.html"><span class="label">Previous</span><span class="title">← Python / RPC</span></a>
+<a class="next" href="../advanced/extending.html"><span class="label">Next</span><span class="title">Extending →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

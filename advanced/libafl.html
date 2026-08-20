@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — LibAFL Path. Official documentation."/>
 <title>LibAFL Path — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -47,7 +48,7 @@
 <a class="nav-link" href="../reference/environment.html">Environment</a>
 <a class="nav-link" href="../reference/exit-codes.html">Exit Codes</a></div>
 <div class="nav-section"><span class="nav-section-title">Advanced</span>
-<a class="nav-link" href="../advanced/libafl.html">LibAFL Path</a>
+<a class="nav-link active" href="../advanced/libafl.html">LibAFL Path</a>
 <a class="nav-link" href="../advanced/python-rpc.html">Python / RPC</a>
 <a class="nav-link" href="../advanced/frida-agent.html">Frida Agent</a>
 <a class="nav-link" href="../advanced/extending.html">Extending</a></div>
@@ -72,11 +73,64 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Advanced<span>/</span>LibAFL Path</div>
-<div class="page-header"><h1>LibAFL Path</h1><p class="lead">Optional LibAFL executor and mutator integration.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>LibAFL Path</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>LibAFL Path</h1><p class="lead">Optional LibAFL 0.15 integration — hierarchical mutator + network executor inside a LibAFL campaign loop.</p></div>
+
+<p>Nexsiz ships a first-class optional path that wires the protocol-aware hierarchical mutator and network executor into LibAFL 0.15. The native engine remains the default; LibAFL is activated only when the binary is built with the feature and the operator passes <code>-L</code>.</p>
+
+<div class="callout info">
+<div class="callout-title">Modules</div>
+<p style="margin-bottom:0"><code>src/execution/libafl_runner.rs</code>, <code>libafl_exec.rs</code>, <code>libafl_mutator.rs</code>. Feature flag: <code>libafl</code> (pulls <code>libafl</code> 0.15.4, <code>libafl_bolts</code> with <code>serdeany_autoreg</code>, <code>serde</code>).</p>
+</div>
+
+<h2>Build</h2>
+<div class="code-block">
+<pre><code>cargo build --release --features libafl
+# or
+cargo build --release --features libafl,json-model
+</code></pre>
+</div>
+<p>Without the feature, <code>-L/--libafl</code> exits with a clear rebuild instruction. The <code>serdeany_autoreg</code> feature on <code>libafl_bolts</code> is required so observers and <code>StdState</code> populate the type registry; otherwise startup panics with an empty types registry.</p>
+
+<h2>Activation</h2>
+<div class="code-block">
+<pre><code>nexsiz -h 127.0.0.1 -p 21 -m ftp -s seeds/ftp -L -v
+nexsiz -h 10.0.0.5 -p 1883 -m mqtt -L -x 50000 -v
+</code></pre>
+</div>
+<p>CLI: <code>-L / --libafl</code>. Config key: <code>use_libafl=true</code>. All other flags (<code>-m</code>, <code>-s</code>, <code>-o</code>, <code>-r</code>, timeout, max-execs, max-runtime) still apply.</p>
+
+<h2>What the runner does</h2>
+<ol>
+<li>Creates a process-lifetime <code>StdMapObserver</code> ("response_map") shared between feedback and executor.</li>
+<li>Builds <code>MaxMapFeedback</code> + <code>CrashFeedback</code>, then <code>StdState</code> (in-memory corpus + on-disk crash corpus under <code>&lt;out&gt;/crashes</code>).</li>
+<li>Constructs <code>NexsizNetworkExecutor</code> that owns the <strong>same</strong> observer instance (LibAFL 0.15 requirement).</li>
+<li>Loads every non-empty file from the seed directory as <code>BytesInput</code>; inserts a default <code>NEXSIZ\r\n</code> seed if the corpus would otherwise be empty.</li>
+<li>Wraps <code>NexsizHierarchicalMutator</code> (protocol-aware) inside a <code>StdMutationalStage</code>.</li>
+<li>Runs <code>fuzz_loop</code> / <code>fuzz_loop_for</code> honouring <code>-x</code> / <code>-R</code>.</li>
+</ol>
+
+<h2>Current limitations</h2>
+<ul>
+<li><strong>Single-core only</strong> — multi-worker LLMP is temporarily disabled. If <code>workers &gt; 1</code> the runner prints a notice and continues single-core.</li>
+<li>Snapshot / desocket / NXS post-crash actors are native-engine features; they are not automatically available on the LibAFL path.</li>
+<li>Coverage feedback uses the response map observer, not the Frida/SHM or software providers.</li>
+</ul>
+
+<h2>When to use it</h2>
+<ul>
+<li>You want LibAFL’s scheduling, feedback composition, and corpus management while keeping Nexsiz’s hierarchical protocol mutations.</li>
+<li>You already have LibAFL-based tooling and need a network-protocol executor that understands FTP/SMTP/HTTP/MQTT/etc. structure.</li>
+<li>For pure Nexsiz campaigns with snapshot, desocket, NXS, or live Python RPC, stay on the native engine (default path).</li>
+</ul>
+
+<div class="page-nav">
+<a class="prev" href="../nxs/custom-nxs.html"><span class="label">Previous</span><span class="title">← Custom NXS</span></a>
+<a class="next" href="../advanced/python-rpc.html"><span class="label">Next</span><span class="title">Python / RPC →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
