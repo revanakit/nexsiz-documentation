@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Exit Codes. Official documentation."/>
 <title>Exit Codes — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -45,7 +46,7 @@
 <a class="nav-link" href="../reference/cli.html">CLI</a>
 <a class="nav-link" href="../reference/config.html">Config File</a>
 <a class="nav-link" href="../reference/environment.html">Environment</a>
-<a class="nav-link" href="../reference/exit-codes.html">Exit Codes</a></div>
+<a class="nav-link active" href="../reference/exit-codes.html">Exit Codes</a></div>
 <div class="nav-section"><span class="nav-section-title">Advanced</span>
 <a class="nav-link" href="../advanced/libafl.html">LibAFL Path</a>
 <a class="nav-link" href="../advanced/python-rpc.html">Python / RPC</a>
@@ -72,11 +73,87 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Reference<span>/</span>Exit Codes</div>
-<div class="page-header"><h1>Exit Codes</h1><p class="lead">Fuzzer and NXS exit code conventions.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Exit Codes</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Exit Codes</h1><p class="lead">Process status codes for the Nexsiz fuzzer binary and for NXS existence scripts.</p></div>
+
+<p>Two process families, two conventions. The main <code>nexsiz</code> binary uses a minimal Unix-style scheme. Official and custom NXS binaries follow the binding table in <code>nxs/CONTRACT.md</code> §2 (implemented in <code>nxs-lib</code> as <code>ExitCode</code>).</p>
+
+<h2>Nexsiz fuzzer (<code>nexsiz</code>)</h2>
+<p>Source: <code>src/main.rs</code>.</p>
+<table>
+<thead><tr><th>Code</th><th>Meaning</th><th>Typical cause</th></tr></thead>
+<tbody>
+<tr><td><code>0</code></td><td>Success</td><td>Campaign finished (or offline path completed): normal run end, <code>--infer-model</code> success, <code>--nxs-list</code> success, <code>--help</code> / <code>--version</code></td></tr>
+<tr><td><code>1</code></td><td>Failure</td><td>Config parse error, engine init failure, campaign error, infer-model error, nxs-list error, <code>-L</code> requested without <code>libafl</code> feature</td></tr>
+</tbody>
+</table>
+
+<div class="callout info">
+<div class="callout-title">Campaigns and crashes</div>
+<p style="margin-bottom:0">Finding crashes does <strong>not</strong> by itself change the fuzzer process exit code. Artefacts land under <code>output/crashes</code> (and related dirs). Automate triage via NXS exit codes and <code>report.json</code>, not by assuming <code>nexsiz</code> returns non-zero on every finding.</p>
+</div>
+
+<div class="code-block">
+<pre><code>nexsiz -h 127.0.0.1 -p 21 -m ftp -s seeds/ftp -o out/ftp
+echo $?
+# 0 — clean stop
+# 1 — config/init/runtime failure
+</code></pre>
+</div>
+
+<h2>NXS existence scripts</h2>
+<p>Binding contract: <code>nxs/CONTRACT.md</code> §2. Canonical enum: <code>nxs/src/lib/src/exit.rs</code>.</p>
+<table>
+<thead><tr><th>Code</th><th>Name</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><code>0</code></td><td>Ok</td><td>Completed normally; no further vulnerability indication</td></tr>
+<tr><td><code>1</code></td><td>Error</td><td>Operational error (missing file, unreachable target, invalid args)</td></tr>
+<tr><td><code>2</code></td><td>Escalate</td><td>Indication of further vulnerability / successful exploit-assist → escalate</td></tr>
+<tr><td><code>3</code></td><td>Timeout</td><td>Internal timeout</td></tr>
+<tr><td><code>4</code></td><td>Interrupted</td><td>Interrupted / cancelled</td></tr>
+<tr><td><code>≥10</code></td><td>Script-specific</td><td>Success variants reserved for the script; document in header / <code>nxs.toml</code></td></tr>
+</tbody>
+</table>
+
+<p><code>SCRIPT_SUCCESS_BASE = 10</code> — script-specific success codes start at ≥10.</p>
+
+<div class="callout warn">
+<div class="callout-title">Escalate (2)</div>
+<p style="margin-bottom:0">Exit <code>2</code> is the primary signal operators and pipelines should watch. Official tools such as <code>crash/auto-repro</code> return <code>2</code> when a refined input confirms the crash. Wire this into SIEM / job controllers, not only into human log review.</p>
+</div>
+
+<h2>Operator patterns</h2>
+<div class="code-block">
+<pre><code># Fuzzer — fail the job only on operational failure
+nexsiz -c campaign.conf -v || exit 1
+
+# NXS standalone — escalate on confirmed secondary finding
+nxs-auto-repro --crash out/crashes/id_000042 --target 10.0.0.5:21 --out nxs-out
+case $? in
+  0) echo "no escalate" ;;
+  1) echo "ops error" >&2; exit 1 ;;
+  2) echo "ESCALATE" >&2; exit 2 ;;
+  3) echo "timeout" >&2; exit 3 ;;
+  4) echo "interrupted" >&2; exit 4 ;;
+  *) echo "script-specific or unknown: $?" ;;
+esac
+</code></pre>
+</div>
+
+<h2>Related</h2>
+<ul>
+<li><a href="../nxs/contract.html">NXS Contract</a> — full invocation and meta schema</li>
+<li><a href="../reference/cli.html">CLI</a> — fuzzer flags</li>
+<li><a href="../guide/configuration.html">Configuration</a> — NXS rate limits and events</li>
+</ul>
+
+<div class="page-nav">
+<a class="prev" href="../reference/environment.html"><span class="label">Previous</span><span class="title">← Environment</span></a>
+<a class="next" href="../architecture/overview.html"><span class="label">Next</span><span class="title">Architecture →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
