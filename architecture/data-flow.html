@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Data Flow. Official documentation."/>
 <title>Data Flow — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -27,7 +28,7 @@
 <div class="nav-section"><span class="nav-section-title">Architecture</span>
 <a class="nav-link" href="../architecture/overview.html">Overview</a>
 <a class="nav-link" href="../architecture/layers.html">Layers</a>
-<a class="nav-link" href="../architecture/data-flow.html">Data Flow</a></div>
+<a class="nav-link active" href="../architecture/data-flow.html">Data Flow</a></div>
 <div class="nav-section"><span class="nav-section-title">Features</span>
 <a class="nav-link" href="../features/protocol-models.html">Protocol Models</a>
 <a class="nav-link" href="../features/integrity-repair.html">Integrity Repair</a>
@@ -72,11 +73,74 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Architecture<span>/</span>Data Flow</div>
-<div class="page-header"><h1>Data Flow</h1><p class="lead">Mutate → repair → encrypt → send → observe → feedback.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Data Flow</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Data Flow</h1><p class="lead">Single-execution path, campaign loop, and offline control paths.</p></div>
+
+<p>End-to-end path of one execution, then campaign-level loops. Aligns with the four-layer stack in <a href="../architecture/overview.html">Overview</a> and <a href="../architecture/layers.html">Layers</a>.</p>
+
+<h2>Single execution</h2>
+<ol>
+<li><strong>Select parent</strong> — corpus / queue entry (<code>SeedId</code>)</li>
+<li><strong>Mutate</strong> — hierarchical ops + optional template splice → child <code>TestCase</code></li>
+<li><strong>Enforce sizes</strong> — <code>FieldSpec.size</code> constraints</li>
+<li><strong>Integrity <code>prepare_for_send</code></strong> — length, checksum, protocol framing</li>
+<li><strong>Encryptor</strong> (optional) — XOR / ChaCha20 / TLS record / pipelines</li>
+<li><strong>Coverage <code>reset</code></strong> (if non-null provider)</li>
+<li><strong>Send</strong> — TCP or UDP; connection reuse when enabled; desocket if session needs reset</li>
+<li><strong>Receive / timeout</strong> — build <code>ExecutionResult</code> (codes, bodies, elapsed, crash/hang flags)</li>
+<li><strong>Coverage <code>collect</code></strong> → <code>CoverageFeedback</code></li>
+<li><strong>State tracker</strong> — update hashes / transitions; set <code>new_state</code> when applicable</li>
+<li><strong>Oracle <code>is_interesting</code></strong></li>
+<li><strong>On interesting / crash / hang</strong> — minimise, log to <code>output/</code>, boost mutator energy, optionally schedule NXS</li>
+</ol>
+
+<div class="code-block">
+<pre><code>seed → mutate → integrity → [encrypt] → send/recv
+         ↓                                    ↓
+    energy↑ ← interesting ← oracle ← result + coverage + state
+         ↓
+    [NXS spawn async] → reaper → exit 2 → secondary.jsonl
+</code></pre>
+</div>
+
+<h2>Campaign loop</h2>
+<ul>
+<li><strong>Engine</strong> owns config, providers (coverage, snapshot), worker pool, NXS rate state</li>
+<li><strong>Workers</strong> run the single-execution path concurrently; each holds mutator RNG state</li>
+<li><strong>Limits</strong> — <code>max_execs</code>, <code>max_runtime</code>, or operator SIGINT</li>
+<li><strong>Snapshot</strong> — optional snapshot at start; on crash, restore backend + bump <code>restore_epoch</code> → workers force-reconnect</li>
+<li><strong>Output layout</strong> — <code>crashes/</code>, <code>hangs/</code>, <code>queue/</code>; with NXS: <code>nxs-meta/</code>, <code>nxs-out/</code>, <code>nxs-findings/</code></li>
+</ul>
+
+<h2>Offline / control paths (no full campaign)</h2>
+<table>
+<thead><tr><th>Path</th><th>Flow</th></tr></thead>
+<tbody>
+<tr><td><code>--infer-model</code></td><td>Read seeds → heuristics → summary / JSON → exit</td></tr>
+<tr><td><code>--nxs-list</code></td><td>Resolve set → print found/missing → exit</td></tr>
+<tr><td><code>-L / --libafl</code></td><td>Delegate campaign to LibAFL runner (feature required)</td></tr>
+<tr><td><code>-Y</code> RPC</td><td>Unix socket control plane for Python client</td></tr>
+</tbody>
+</table>
+
+<h2>Failure &amp; signal handling</h2>
+<ul>
+<li>Config / init / campaign errors → process exit <code>1</code></li>
+<li>Target crash does not force fuzzer exit <code>1</code>; artefacts + optional NXS exit <code>2</code> carry escalation</li>
+<li>Unix SIGINT/SIGTERM — graceful campaign stop (platform-gated handlers)</li>
+</ul>
+
+<div class="callout info">
+<div class="callout-title">Design invariant</div>
+<p style="margin-bottom:0">Optional planes (coverage map, snapshot, NXS, encryptor) default off or null. Enabling them is explicit via CLI/config/env — preserving reproducible minimal campaigns.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../architecture/layers.html"><span class="label">Previous</span><span class="title">← Layers</span></a>
+<a class="next" href="../features/protocol-models.html"><span class="label">Next</span><span class="title">Protocol Models →</span></a>
+</div>
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
