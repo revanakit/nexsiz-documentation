@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Extending. Official documentation."/>
 <title>Extending — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -50,7 +51,7 @@
 <a class="nav-link" href="../advanced/libafl.html">LibAFL Path</a>
 <a class="nav-link" href="../advanced/python-rpc.html">Python / RPC</a>
 <a class="nav-link" href="../advanced/frida-agent.html">Frida Agent</a>
-<a class="nav-link" href="../advanced/extending.html">Extending</a></div>
+<a class="nav-link active" href="../advanced/extending.html">Extending</a></div>
 <div class="nav-section"><span class="nav-section-title">Security</span>
 <a class="nav-link" href="../security/policy.html">Policy</a>
 <a class="nav-link" href="../security/authorised-use.html">Authorised Use</a></div>
@@ -72,11 +73,68 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Advanced<span>/</span>Extending</div>
-<div class="page-header"><h1>Extending</h1><p class="lead">Plugin traits, custom models, and custom NXS.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Extending</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Extending</h1><p class="lead">Trait-based plugins, JSON models, coverage providers, and NXS actors — extend without touching the engine core.</p></div>
+
+<p>Nexsiz is deliberately modular. Most extension points are selected by name from CLI/config; custom implementations can be registered at compile time or injected at runtime via the Python/RPC control plane.</p>
+
+<div class="callout info">
+<div class="callout-title">Plugin surface</div>
+<p style="margin-bottom:0"><code>src/plugin/</code> — Protocol, Integrity, Oracle, Encryptor traits + <code>PluginRegistry</code> and composition pipelines. Default implementations preserve original behaviour.</p>
+</div>
+
+<h2>Extension points</h2>
+<table>
+<thead><tr><th>Surface</th><th>How to extend</th><th>Runtime switch</th></tr></thead>
+<tbody>
+<tr><td>Protocol model</td><td>Built-in name or JSON file (<code>--features json-model</code>)</td><td><code>-m</code> / RPC protocol bridge</td></tr>
+<tr><td>Integrity repair</td><td>Implement repairer; register by name</td><td><code>-i</code> / RPC integrity bridge</td></tr>
+<tr><td>Encryptor</td><td>Implement encryptor; register by name</td><td><code>-e -k</code> / RPC encryptor bridge</td></tr>
+<tr><td>Oracle</td><td>Implement <code>is_interesting</code>; register by name</td><td><code>-O</code> / RPC oracle (live Python)</td></tr>
+<tr><td>Coverage</td><td><code>CoverageProvider</code> trait (null / map / software)</td><td><code>-C</code> / <code>-S</code></td></tr>
+<tr><td>Snapshot</td><td><code>SnapshotProvider</code> (null / process / CRIU)</td><td><code>-Z --snapshot-backend</code></td></tr>
+<tr><td>Desocket</td><td>Builtin sequences or model <code>desocket</code> field</td><td>auto from model / config</td></tr>
+<tr><td>NXS actors</td><td>Standalone binary + categories.toml entry</td><td><code>--nxs</code> / <code>--nxs-path</code></td></tr>
+<tr><td>Mutator dictionary</td><td>Model dictionary or live push</td><td>RPC mutator bridge</td></tr>
+</tbody>
+</table>
+
+<h2>JSON protocol models</h2>
+<p>With <code>--features json-model</code> you can ship operator-defined models without recompiling:</p>
+<div class="code-block">
+<pre><code>nexsiz -m models/custom-example.json -h 10.0.0.5 -p 9000 -v
+</code></pre>
+</div>
+<p>Schema fields: <code>name</code>, <code>length_prefixed</code>, <code>length_width</code>, <code>endian</code>, <code>delimiter</code>, <code>checksum</code>, <code>dictionary</code>, <code>messages[]</code> (typed fields), optional <code>desocket</code>. See <a href="../features/protocol-models.html">Protocol Models</a>.</p>
+
+<h2>Offline model inference</h2>
+<div class="code-block">
+<pre><code>nexsiz --infer-model -s seeds/custom --infer-out models/inferred.json
+</code></pre>
+</div>
+<p>Produces a sketch (delimiter, length-prefix heuristics, endian, dictionary). Refine into a formal model before production campaigns.</p>
+
+<h2>Custom NXS</h2>
+<p>Any executable that respects the NXS contract (meta JSON + exit codes) can be added to a search path and selected via <code>--nxs</code>. Official set lives under <code>nxs/src/</code>; categories are declared in <code>categories.toml</code>. See <a href="../nxs/custom-nxs.html">Custom NXS</a> and <a href="../nxs/contract.html">Contract</a>.</p>
+
+<h2>Live injection (RPC)</h2>
+<p>When the Unix RPC socket is active (<code>-Y</code>), a Python client can push models, strategies, dictionary tokens, and a live oracle without restarting the campaign. See <a href="../advanced/python-rpc.html">Python / RPC</a>.</p>
+
+<h2>Design principle</h2>
+<ul>
+<li>Defaults preserve zero behaviour change.</li>
+<li>Selection is by name from CLI → env → config (CLI wins).</li>
+<li>Hot path stays free of reverse-RPC except the optional bounded oracle query.</li>
+<li>Compile-time features (<code>libafl</code>, <code>json-model</code>, <code>criu</code>) gate optional dependencies so the default binary stays lean.</li>
+</ul>
+
+<div class="page-nav">
+<a class="prev" href="../advanced/frida-agent.html"><span class="label">Previous</span><span class="title">← Frida Agent</span></a>
+<a class="next" href="../security/policy.html"><span class="label">Next</span><span class="title">Security Policy →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>

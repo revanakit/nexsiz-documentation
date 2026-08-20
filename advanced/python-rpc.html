@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="description" content="Nexsiz — Python / RPC. Official documentation."/>
 <title>Python / RPC — Nexsiz</title>
 <link rel="icon" href="../assets/img/nexsiz.jpg"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
@@ -48,7 +49,7 @@
 <a class="nav-link" href="../reference/exit-codes.html">Exit Codes</a></div>
 <div class="nav-section"><span class="nav-section-title">Advanced</span>
 <a class="nav-link" href="../advanced/libafl.html">LibAFL Path</a>
-<a class="nav-link" href="../advanced/python-rpc.html">Python / RPC</a>
+<a class="nav-link active" href="../advanced/python-rpc.html">Python / RPC</a>
 <a class="nav-link" href="../advanced/frida-agent.html">Frida Agent</a>
 <a class="nav-link" href="../advanced/extending.html">Extending</a></div>
 <div class="nav-section"><span class="nav-section-title">Security</span>
@@ -72,11 +73,75 @@
 </header>
 <main class="content"><div class="content-inner">
 <div class="breadcrumb"><a href="../index.html">Docs</a><span>/</span>Advanced<span>/</span>Python / RPC</div>
-<div class="page-header"><h1>Python / RPC</h1><p class="lead">Unix domain socket campaign control and Python client.</p></div>
-<div class="placeholder"><strong>Content placeholder</strong><br/>This page is part of the Phase&nbsp;0 skeleton. Full content will be authored in a subsequent phase.</div>
-<div class="callout info"><div class="callout-title">Coming soon</div>Detailed documentation for <em>Python / RPC</em> is scheduled for Phase&nbsp;1–3 content delivery.</div>
+<div class="page-header"><h1>Python / RPC</h1><p class="lead">Out-of-process campaign control over a Unix-domain socket — live steering without recompilation.</p></div>
+
+<p>The scripting surface exposes a control plane so an operator or Python client can inject seeds, swap protocol models, attach a live <code>is_interesting</code> oracle, change integrity/encryptor strategies, and push mutator dictionary extras — all while the campaign is running.</p>
+
+<div class="callout info">
+<div class="callout-title">Module</div>
+<p style="margin-bottom:0"><code>src/scripting/</code> — <code>RpcServer</code>, bridges (protocol / integrity / encryptor / mutator / oracle), pure-stdlib JSON. Activated via <code>-Y</code> / <code>NEXSIZ_RPC_SOCK</code>.</p>
+</div>
+
+<h2>Activation</h2>
+<div class="code-block">
+<pre><code>nexsiz -h 127.0.0.1 -p 21 -m ftp -Y /tmp/nexsiz.sock -v
+# or
+export NEXSIZ_RPC_SOCK=/tmp/nexsiz.sock
+nexsiz -h 127.0.0.1 -p 21 -m ftp -v
+</code></pre>
+</div>
+<p>Unix only. On non-Unix platforms <code>RpcServer::start</code> returns an explicit error; the rest of the fuzzer remains fully usable.</p>
+
+<h2>Capabilities</h2>
+<table>
+<thead><tr><th>Bridge</th><th>What you can push</th></tr></thead>
+<tbody>
+<tr><td>Protocol</td><td>Live <code>ProtocolModel</code> store (JSON model or name)</td></tr>
+<tr><td>Integrity</td><td>Strategy name → repairer factory</td></tr>
+<tr><td>Encryptor</td><td>Name + key → encryptor factory</td></tr>
+<tr><td>Mutator</td><td>Extra dictionary tokens + generation counter</td></tr>
+<tr><td>Oracle</td><td>Register as live Python oracle (reverse-RPC <code>is_interesting</code>)</td></tr>
+<tr><td>Seeds</td><td>Structured JSON seed → <code>TestCase</code></td></tr>
+</tbody>
+</table>
+
+<h2>Transport &amp; concurrency</h2>
+<ul>
+<li>Line-delimited JSON over a Unix-domain socket.</li>
+<li>One accept thread (<code>nexsiz-rpc</code>) + one short-lived client thread per connection.</li>
+<li>Non-blocking accept, 50&nbsp;ms poll, read/write timeouts prevent a stalled client from blocking the surface.</li>
+<li>Hot path (mutate → repair → encrypt → send) never performs reverse-RPC except the optional oracle query (bounded timeout).</li>
+<li>All plugin injection is push-style; workers re-resolve on the next cycle via generation or name comparison.</li>
+</ul>
+
+<h2>Oracle mode (reverse-RPC)</h2>
+<p>After a successful <code>register_oracle</code> the connection leaves the normal request/response path:</p>
+<ol>
+<li>Engine pushes <code>is_interesting</code> requests to the Python client.</li>
+<li>Python answers with a boolean (or structured result).</li>
+<li>On disconnect / timeout / stop flag the bridge unregisters and the default oracle is restored.</li>
+</ol>
+
+<h2>Design invariants</h2>
+<ul>
+<li><strong>Zero behaviour change</strong> when the RPC socket is not configured.</li>
+<li>The server never owns campaign logic — pure transport + mode switcher that delegates to <code>RpcContext</code> and the bridges.</li>
+<li>Socket path is removed on <code>Drop</code>; cooperative shutdown shares the same <code>AtomicBool</code> used by workers and the Engine.</li>
+</ul>
+
+<div class="callout info">
+<div class="callout-title">Client</div>
+<p style="margin-bottom:0">Reference client: <code>python/nexsiz_client.py</code> (shipped with the source tree). Use it as the starting point for custom steering scripts.</p>
+</div>
+
+<div class="page-nav">
+<a class="prev" href="../advanced/libafl.html"><span class="label">Previous</span><span class="title">← LibAFL Path</span></a>
+<a class="next" href="../advanced/frida-agent.html"><span class="label">Next</span><span class="title">Frida Agent →</span></a>
+</div>
+
 </div></main>
 <footer class="footer"><span>Nexsiz Documentation &middot; Authorised use only</span><span>Apache-2.0 &middot; Revana</span></footer>
 </div></div>
 <script src="../assets/js/main.js"></script>
-</body></html>
+</body>
+</html>
