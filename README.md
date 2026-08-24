@@ -1,7 +1,7 @@
 **Nexsiz Documentation Site**
 
 <p align="center">
-  <img src="assets/nexsiz-mascot.png" width="400" height="400" alt="Logo">
+  <img src="assets/img/nexsiz-mascot.png" width="400" height="400" alt="Logo">
 </p>
 
 
