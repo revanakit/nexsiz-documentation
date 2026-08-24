@@ -1,4 +1,9 @@
-# Nexsiz Documentation Site
+**Nexsiz Documentation Site**
+
+<p align="center">
+  <img src="assets/nexsiz-mascot.png" width="400" height="400" alt="Logo">
+</p>
+
 
 Official documentation website for **Nexsiz** — Stateful Network Protocol Fuzzer.
 
